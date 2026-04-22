@@ -1,0 +1,306 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block title %}Lead Analytics — {{ site_title }}{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+.analytics-wrap{padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.analytics-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.analytics-header h1{font-size:22px;font-weight:700;color:#1a1a1a;margin:0;display:flex;align-items:center;gap:10px}
+.back-btn{background:#5d6d87;color:#fff;padding:8px 18px;border-radius:4px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.back-btn:hover{background:#4a5a72;color:#fff}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:28px}
+.kpi-card{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:18px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.kpi-icon{display:flex;justify-content:center;margin-bottom:8px}
+.kpi-value{font-size:30px;font-weight:800;line-height:1;margin-bottom:6px}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#6c757d}
+.kpi-sub{font-size:11px;color:#6c757d;margin-top:4px}
+.kpi-blue .kpi-value{color:#007bff} .kpi-blue .kpi-icon svg{color:#007bff}
+.kpi-red .kpi-value{color:#dc3545} .kpi-red .kpi-icon svg{color:#dc3545}
+.kpi-yellow .kpi-value{color:#e6a817} .kpi-yellow .kpi-icon svg{color:#e6a817}
+.kpi-teal .kpi-value{color:#17a2b8} .kpi-teal .kpi-icon svg{color:#17a2b8}
+.kpi-green .kpi-value{color:#28a745} .kpi-green .kpi-icon svg{color:#28a745}
+.kpi-gold .kpi-value{color:#c1a478} .kpi-gold .kpi-icon svg{color:#c1a478}
+.kpi-navy .kpi-value{color:#5d6d87} .kpi-navy .kpi-icon svg{color:#5d6d87}
+.kpi-purple .kpi-value{color:#6f42c1} .kpi-purple .kpi-icon svg{color:#6f42c1}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.charts-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px}
+.chart-card{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.chart-card h3{font-size:13px;font-weight:700;color:#1a1a1a;margin:0 0 16px;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:7px}
+.chart-card h3 svg{color:#5d6d87;flex-shrink:0}
+.tables-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.table-card{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);overflow:hidden}
+.table-card h3{font-size:13px;font-weight:700;color:#1a1a1a;margin:0 0 16px;text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;gap:7px}
+.table-card h3 svg{color:#5d6d87;flex-shrink:0}
+.analytics-table{width:100%;border-collapse:collapse;font-size:13px}
+.analytics-table th{background:#f8f9fa;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6c757d;border-bottom:2px solid #e8e8e8}
+.analytics-table td{padding:9px 12px;border-bottom:1px solid #f0f0f0;color:#333;vertical-align:middle}
+.analytics-table tr:last-child td{border-bottom:none}
+.analytics-table tr:hover td{background:#fafafa}
+.badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;color:#fff}
+.badge-new{background:#dc3545}
+.badge-contacted{background:#e6a817}
+.badge-qualified{background:#17a2b8}
+.badge-closed{background:#28a745}
+.progress-bar-wrap{background:#f0f0f0;border-radius:4px;height:8px;overflow:hidden}
+.progress-bar-fill{height:100%;border-radius:4px;background:#c1a478}
+.trend-up{color:#28a745;font-weight:700;display:inline-flex;align-items:center;gap:2px}
+.trend-down{color:#dc3545;font-weight:700;display:inline-flex;align-items:center;gap:2px}
+@media(max-width:900px){.charts-row,.charts-row-3,.tables-row{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-wrap">
+
+  <!-- Header -->
+  <div class="analytics-header">
+    <h1>
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c1a478" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Lead Analytics Dashboard
+    </h1>
+    <a href="../" class="back-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back to Leads
+    </a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="kpi-value">{{ total }}</div>
+      <div class="kpi-label">Total Leads</div>
+      <div class="kpi-sub">All time</div>
+    </div>
+    <div class="kpi-card kpi-red">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <div class="kpi-value">{{ new_count }}</div>
+      <div class="kpi-label">New</div>
+      <div class="kpi-sub">Awaiting contact</div>
+    </div>
+    <div class="kpi-card kpi-yellow">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.9 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.1a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17.5z"/></svg></div>
+      <div class="kpi-value">{{ contacted }}</div>
+      <div class="kpi-label">Contacted</div>
+      <div class="kpi-sub">In progress</div>
+    </div>
+    <div class="kpi-card kpi-teal">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="kpi-value">{{ qualified }}</div>
+      <div class="kpi-label">Qualified</div>
+      <div class="kpi-sub">Hot leads</div>
+    </div>
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="kpi-value">{{ closed }}</div>
+      <div class="kpi-label">Closed</div>
+      <div class="kpi-sub">Converted</div>
+    </div>
+    <div class="kpi-card kpi-gold">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div class="kpi-value">{{ conversion_rate }}%</div>
+      <div class="kpi-label">Conversion</div>
+      <div class="kpi-sub">Closed / Total</div>
+    </div>
+    <div class="kpi-card kpi-navy">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div class="kpi-value">{{ this_month }}</div>
+      <div class="kpi-label">This Month</div>
+      <div class="kpi-sub">
+        {% if month_change >= 0 %}
+          <span class="trend-up">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            {{ month_pct }}%
+          </span> vs last month
+        {% else %}
+          <span class="trend-down">
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            {{ month_pct|cut:"-" }}%
+          </span> vs last month
+        {% endif %}
+      </div>
+    </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+      <div class="kpi-value">{{ newsletter_active }}</div>
+      <div class="kpi-label">Newsletter</div>
+      <div class="kpi-sub">{{ newsletter_total }} total subs</div>
+    </div>
+  </div>
+
+  <!-- Row 1: Trend + Monthly -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Daily Leads &mdash; Last 30 Days
+      </h3>
+      <div style="position:relative;height:220px"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Monthly Leads &mdash; Last 12 Months
+      </h3>
+      <div style="position:relative;height:220px"><canvas id="monthlyChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 2: Donut charts -->
+  <div class="charts-row-3">
+    <div class="chart-card">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+        By Inquiry Type
+      </h3>
+      <div style="position:relative;height:220px"><canvas id="typeChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        By Source
+      </h3>
+      <div style="position:relative;height:220px"><canvas id="sourceChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        By Status
+      </h3>
+      <div style="position:relative;height:220px"><canvas id="statusChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Row 3: Tables -->
+  <div class="tables-row">
+    <div class="table-card">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Top Locations
+      </h3>
+      {% if top_locations %}
+      <table class="analytics-table">
+        <thead><tr><th>Location</th><th>Leads</th><th>Share</th></tr></thead>
+        <tbody>
+          {% for loc in top_locations %}
+          <tr>
+            <td>{{ loc.location }}</td>
+            <td><strong>{{ loc.count }}</strong></td>
+            <td style="width:120px">
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill" data-pct="{{ loc.pct }}"></div>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p style="color:#999;font-size:13px">No location data yet.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-card">
+      <h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        Recent Leads
+      </h3>
+      <table class="analytics-table">
+        <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          {% for lead in recent_leads %}
+          <tr>
+            <td>
+              <a href="/admin/leads/lead/{{ lead.id }}/change/" style="color:#007bff;text-decoration:none;font-weight:600">
+                {{ lead.full_name|default:lead.email }}
+              </a>
+            </td>
+            <td style="font-size:11px;color:#555">{{ lead.get_inquiry_type_display }}</td>
+            <td><span class="badge badge-{{ lead.status|lower }}">{{ lead.get_status_display }}</span></td>
+            <td style="font-size:11px;color:#999">{{ lead.created_at|date:"M d" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div id="chart-data"
+  data-trend-labels="{{ trend_labels_json|escapejs }}"
+  data-trend-data="{{ trend_data_json|escapejs }}"
+  data-monthly-labels="{{ monthly_labels_json|escapejs }}"
+  data-monthly-data="{{ monthly_data_json|escapejs }}"
+  data-type-labels="{{ type_labels_json|escapejs }}"
+  data-type-data="{{ type_data_json|escapejs }}"
+  data-type-colors="{{ type_colors_json|escapejs }}"
+  data-source-labels="{{ source_labels_json|escapejs }}"
+  data-source-data="{{ source_data_json|escapejs }}"
+  data-source-colors="{{ source_colors_json|escapejs }}"
+  data-status-labels="{{ status_labels_json|escapejs }}"
+  data-status-data="{{ status_data_json|escapejs }}"
+  style="display:none"
+></div>
+
+<script>
+(function () {
+  var el = document.getElementById('chart-data');
+  var parse = function (attr) { return JSON.parse(el.getAttribute(attr)); };
+  var FONT = { family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", size: 12 };
+  Chart.defaults.font = FONT;
+
+  var trendLabels   = parse('data-trend-labels');
+  var trendData     = parse('data-trend-data');
+  var monthlyLabels = parse('data-monthly-labels');
+  var monthlyData   = parse('data-monthly-data');
+  var typeLabels    = parse('data-type-labels');
+  var typeData      = parse('data-type-data');
+  var typeColors    = parse('data-type-colors');
+  var sourceLabels  = parse('data-source-labels');
+  var sourceData    = parse('data-source-data');
+  var sourceColors  = parse('data-source-colors');
+  var statusLabels  = parse('data-status-labels');
+  var statusData    = parse('data-status-data');
+
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: { labels: trendLabels, datasets: [{ label: 'Leads', data: trendData, borderColor: '#c1a478', backgroundColor: 'rgba(193,164,120,0.12)', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#c1a478', fill: true, tension: 0.4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8, font: FONT }, grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: FONT }, grid: { color: '#f0f0f0' } } } }
+  });
+
+  new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: { labels: monthlyLabels, datasets: [{ label: 'Leads', data: monthlyData, backgroundColor: '#5d6d87', borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: FONT }, grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: FONT }, grid: { color: '#f0f0f0' } } } }
+  });
+
+  new Chart(document.getElementById('typeChart'), {
+    type: 'doughnut',
+    data: { labels: typeLabels, datasets: [{ data: typeData, backgroundColor: typeColors, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: FONT, padding: 10 } } }, cutout: '60%' }
+  });
+
+  new Chart(document.getElementById('sourceChart'), {
+    type: 'doughnut',
+    data: { labels: sourceLabels, datasets: [{ data: sourceData, backgroundColor: sourceColors, borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: FONT, padding: 10 } } }, cutout: '60%' }
+  });
+
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: { labels: statusLabels, datasets: [{ data: statusData, backgroundColor: ['#dc3545','#e6a817','#17a2b8','#28a745'], borderWidth: 2, borderColor: '#fff' }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: FONT, padding: 10 } } }, cutout: '60%' }
+  });
+
+  document.querySelectorAll('.progress-bar-fill[data-pct]').forEach(function(el) {
+    el.style.width = el.getAttribute('data-pct') + '%';
+  });
+}());
+</script>
+{% endblock %}
