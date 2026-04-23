@@ -14,8 +14,14 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
     featured: Get featured projects
     """
     
-    queryset = Project.objects.all()
+    queryset = Project.objects.prefetch_related('images').all()
     serializer_class = ProjectSerializer
+    
+    def get_serializer_context(self):
+        """Add request to serializer context"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
     
     @action(detail=False, methods=['get'])
     def featured(self, request):
