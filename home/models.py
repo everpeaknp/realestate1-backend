@@ -99,8 +99,8 @@ class Benefit(models.Model):
 
     class Meta:
         ordering = ['order', 'id']
-        verbose_name = 'Benefit'
-        verbose_name_plural = 'Benefits'
+        verbose_name = 'Benefit Item'
+        verbose_name_plural = 'Benefit Items'
 
     def __str__(self):
         return self.text[:50]
@@ -117,8 +117,8 @@ class BenefitGalleryImage(models.Model):
 
     class Meta:
         ordering = ['order', 'id']
-        verbose_name = 'Benefit Gallery Image'
-        verbose_name_plural = 'Benefit Gallery Images'
+        verbose_name = 'Gallery Image'
+        verbose_name_plural = 'Gallery Images'
 
     def __str__(self):
         return f'Gallery Image {self.id}'
@@ -133,8 +133,8 @@ class BenefitsContactInfo(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Benefits Contact Info'
-        verbose_name_plural = 'Benefits Contact Info'
+        verbose_name = 'Contact Info'
+        verbose_name_plural = 'Contact Info'
 
     def save(self, *args, **kwargs):
         if not self.pk and BenefitsContactInfo.objects.exists():

@@ -173,7 +173,7 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     "navigation_expanded": True,
     "hide_apps": [],
-    "hide_models": [],
+    "hide_models": ["home.Benefit", "home.BenefitGalleryImage", "home.BenefitsContactInfo"],
     "order_with_respect_to": [
         "properties",
         "leads",
@@ -237,6 +237,29 @@ JAZZMIN_SETTINGS = {
                 "url": "/admin/leads/lead/analytics/",
                 "icon": "fas fa-chart-bar",
                 "permissions": ["leads.view_lead"],
+            }
+        ],
+        "home": [
+            {
+                "name": "Benefits Section",
+                "icon": "fas fa-check-circle",
+                "children": [
+                    {
+                        "name": "Benefit Items",
+                        "url": "/admin/home/benefit/",
+                        "icon": "fas fa-check",
+                    },
+                    {
+                        "name": "Gallery Images",
+                        "url": "/admin/home/benefitgalleryimage/",
+                        "icon": "fas fa-images",
+                    },
+                    {
+                        "name": "Contact Info",
+                        "url": "/admin/home/benefitscontactinfo/",
+                        "icon": "fas fa-phone",
+                    },
+                ]
             }
         ],
     },
