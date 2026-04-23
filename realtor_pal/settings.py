@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'about',
     'contact',
     'cms',
+    'home',
 ]
 
 MIDDLEWARE = [
@@ -186,6 +187,7 @@ JAZZMIN_SETTINGS = {
         "about",
         "contact",
         "cms",
+        "home",
     ],
     
     "icons": {
@@ -215,6 +217,17 @@ JAZZMIN_SETTINGS = {
         "cms.NavigationLink": "fas fa-link",
         "cms.FooterSettings": "fas fa-shoe-prints",
         "cms.FooterLink": "fas fa-external-link-alt",
+        "home.HeroSettings": "fas fa-image",
+        "home.HeroCard": "fas fa-th-large",
+        "home.HowItWorksStep": "fas fa-tasks",
+        "home.Neighborhood": "fas fa-map-marked-alt",
+        "home.Benefit": "fas fa-check",
+        "home.BenefitGalleryImage": "fas fa-images",
+        "home.BenefitsContactInfo": "fas fa-phone",
+        "home.ContactSectionSettings": "fas fa-id-card",
+        "home.InstagramImage": "fab fa-instagram",
+        "home.PersonSectionSettings": "fas fa-user-circle",
+        "home.StatItem": "fas fa-chart-line",
     },
 
     "custom_links": {
