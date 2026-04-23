@@ -5,11 +5,12 @@ from .models import Testimonial
 class TestimonialSerializer(serializers.ModelSerializer):
     """Serializer for testimonials"""
     
+    role = serializers.CharField(source='get_role_display')
+    
     class Meta:
         model = Testimonial
         fields = [
-            'id', 'client_name', 'client_avatar', 'rating',
-            'content', 'property_type', 'video_url',
-            'is_featured', 'created_at'
+            'id', 'title', 'text', 'name', 'role', 'image',
+            'rating', 'video_url', 'is_featured', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'is_featured']

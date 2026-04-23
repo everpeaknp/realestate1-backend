@@ -7,27 +7,32 @@ from .models import Testimonial
 class TestimonialAdmin(admin.ModelAdmin):
     """Enhanced admin for Testimonial model with Jazzmin optimization"""
     list_display = (
-        'client_name', 'rating_display', 'property_type', 
-        'is_approved_icon', 'is_featured_icon', 'has_video_icon', 'created_at'
+        'title', 'name', 'role', 'rating_display', 'image_preview',
+        'is_approved', 'is_featured', 'has_video_icon', 'order', 'created_at'
     )
-    list_filter = ('rating', 'is_approved', 'is_featured', 'created_at')
-    search_fields = ('client_name', 'content', 'property_type')
-    readonly_fields = ('created_at', 'updated_at')
+    list_filter = ('rating', 'role', 'is_approved', 'is_featured', 'created_at')
+    search_fields = ('title', 'name', 'text')
+    readonly_fields = ('created_at', 'updated_at', 'image_preview_large')
     date_hierarchy = 'created_at'
     list_per_page = 50
+    list_editable = ('order', 'is_approved', 'is_featured')
     
     fieldsets = (
-        ('Client Information', {
-            'fields': ('client_name', 'client_avatar')
+        ('Basic Information', {
+            'fields': ('title', 'name', 'role', 'rating')
         }),
-        ('Testimonial', {
-            'fields': ('rating', 'content', 'property_type')
+        ('Content', {
+            'fields': ('text',)
+        }),
+        ('Image', {
+            'fields': ('image', 'image_preview_large')
         }),
         ('Media', {
-            'fields': ('video_url',)
+            'fields': ('video_url',),
+            'classes': ('collapse',)
         }),
-        ('Status', {
-            'fields': ('is_approved', 'is_featured')
+        ('Display Settings', {
+            'fields': ('is_approved', 'is_featured', 'order')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -35,9 +40,27 @@ class TestimonialAdmin(admin.ModelAdmin):
         }),
     )
     
+    def image_preview(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" />',
+                obj.image.url
+            )
+        return format_html('<span style="color: #999;">No image</span>')
+    image_preview.short_description = 'Image'
+    
+    def image_preview_large(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="max-width: 300px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
+                obj.image.url
+            )
+        return format_html('<p style="color: #999;">No image uploaded</p>')
+    image_preview_large.short_description = 'Image Preview'
+    
     def rating_display(self, obj):
         stars = '★' * obj.rating + '☆' * (5 - obj.rating)
-        return format_html('<span style="color: #ffc107; font-size: 16px; letter-spacing: 2px;">{}</span>', stars)
+        return format_html('<span style="color: #f39c12; font-size: 16px; letter-spacing: 2px;">{}</span>', stars)
     rating_display.short_description = 'Rating'
     rating_display.admin_order_field = 'rating'
     
@@ -50,7 +73,7 @@ class TestimonialAdmin(admin.ModelAdmin):
     
     def is_featured_icon(self, obj):
         if obj.is_featured:
-            return format_html('<span style="color: #ffc107; font-size: 18px;">★</span>')
+            return format_html('<span style="color: #f39c12; font-size: 18px;">★</span>')
         return format_html('<span style="color: #ddd; font-size: 18px;">☆</span>')
     is_featured_icon.short_description = 'Featured'
     is_featured_icon.admin_order_field = 'is_featured'
