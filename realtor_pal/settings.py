@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'services',
     'about',
     'contact',
+    'cms',
 ]
 
 MIDDLEWARE = [
@@ -184,6 +185,7 @@ JAZZMIN_SETTINGS = {
         "services",
         "about",
         "contact",
+        "cms",
     ],
     
     "icons": {
@@ -209,6 +211,10 @@ JAZZMIN_SETTINGS = {
         "about.ServicesProvide": "fas fa-hands-helping",
         "contact.ContactCard": "fas fa-address-card",
         "contact.ContactFormSettings": "fas fa-cog",
+        "cms.HeaderSettings": "fas fa-heading",
+        "cms.NavigationLink": "fas fa-link",
+        "cms.FooterSettings": "fas fa-shoe-prints",
+        "cms.FooterLink": "fas fa-external-link-alt",
     },
 
     "custom_links": {
