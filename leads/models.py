@@ -14,10 +14,11 @@ class Lead(models.Model):
     ]
     
     SOURCE_CHOICES = [
-        ('CONTACT_FORM', 'Contact Form'),
-        ('CHATBOT', 'Chatbot'),
+        ('CONTACT_FORM',     'Contact Form'),
+        ('CHATBOT',          'Chatbot'),
         ('PROPERTY_INQUIRY', 'Property Inquiry'),
-        ('NEWSLETTER', 'Newsletter'),
+        ('NEWSLETTER',       'Newsletter'),
+        ('VALUATION',        "What's My Home Worth"),
     ]
     
     STATUS_CHOICES = [
@@ -32,13 +33,17 @@ class Lead(models.Model):
     last_name = models.CharField(max_length=100, blank=True)
     email = models.EmailField()
     phone = models.CharField(max_length=20, blank=True)
-    
+
     # Inquiry Details
     inquiry_type = models.CharField(max_length=20, choices=INQUIRY_TYPE_CHOICES)
     location = models.CharField(max_length=200, blank=True)
     subject = models.CharField(max_length=200, blank=True)
     message = models.TextField()
-    
+
+    # Interest / Preferences (optional)
+    budget = models.CharField(max_length=100, blank=True, help_text="e.g. $200,000 - $400,000")
+    property_type_interest = models.CharField(max_length=100, blank=True, help_text="e.g. 3BHK apartment, house, land")
+
     # Metadata
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES)
     related_property = models.ForeignKey(Property, on_delete=models.SET_NULL, null=True, blank=True, related_name='inquiries')

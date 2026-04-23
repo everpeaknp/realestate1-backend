@@ -54,6 +54,19 @@ def lead_analytics_view(request):
     newsletter_total  = NewsletterSubscription.objects.count()
     newsletter_active = NewsletterSubscription.objects.filter(status='ACTIVE').count()
 
+    # Most inquired property
+    from properties.models import Property as PropertyModel
+    from django.db.models import Count as DjCount
+    most_inquired = (
+        all_leads.exclude(related_property=None)
+        .values('related_property__title', 'related_property__slug')
+        .annotate(inq=DjCount('id'))
+        .order_by('-inq')
+        .first()
+    )
+    most_inquired_title = most_inquired['related_property__title'] if most_inquired else 'N/A'
+    most_inquired_count = most_inquired['inq'] if most_inquired else 0
+
     # --- By inquiry type ---
     by_type = list(
         all_leads.values('inquiry_type')
@@ -144,6 +157,10 @@ def lead_analytics_view(request):
         'conversion_rate': conversion_rate,
         'newsletter_total': newsletter_total,
         'newsletter_active': newsletter_active,
+        'today_count': today_count,
+        'week_count': week_count,
+        'most_inquired_title': most_inquired_title,
+        'most_inquired_count': most_inquired_count,
 
         # Chart data (JSON)
         'type_labels_json':   json.dumps(type_labels),
@@ -199,6 +216,10 @@ class LeadAdmin(admin.ModelAdmin):
         ('Inquiry Details', {
             'fields': ('inquiry_type', 'location', 'subject', 'message')
         }),
+        ('Interest / Preferences', {
+            'fields': ('budget', 'property_type_interest'),
+            'classes': ('collapse',),
+        }),
         ('Metadata', {
             'fields': ('source', 'related_property', 'status')
         }),
@@ -249,9 +270,18 @@ class LeadAdmin(admin.ModelAdmin):
             'CHATBOT':          'Chat',
             'PROPERTY_INQUIRY': 'Property',
             'NEWSLETTER':       'Newsletter',
+            'VALUATION':        'Valuation',
+        }
+        source_colors = {
+            'CONTACT_FORM':     '#17a2b8',
+            'CHATBOT':          '#6f42c1',
+            'PROPERTY_INQUIRY': '#28a745',
+            'NEWSLETTER':       '#fd7e14',
+            'VALUATION':        '#c1a478',
         }
         return format_html(
-            '<span style="padding:3px 8px;background:#f8f9fa;border-radius:3px;font-size:11px;color:#495057;">{}</span>',
+            '<span style="background:{};color:white;padding:3px 10px;border-radius:3px;font-size:11px;">{}</span>',
+            source_colors.get(obj.source, '#6c757d'),
             source_labels.get(obj.source, obj.get_source_display())
         )
     source_badge.short_description = 'Source'

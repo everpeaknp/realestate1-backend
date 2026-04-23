@@ -1,5 +1,5 @@
 """
-Django settings for Realtor Pal project.
+Django settings for Lily White Realestate project.
 """
 
 from pathlib import Path
@@ -132,7 +132,7 @@ REST_FRAMEWORK = {
 
 # Spectacular settings (API documentation)
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Realtor Pal API',
+    'TITLE': 'Lily White Realestate API',
     'DESCRIPTION': 'Real Estate Platform API',
     'VERSION': '1.0.0',
 }
@@ -147,12 +147,12 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 # Jazzmin settings
 JAZZMIN_SETTINGS = {
-    "site_title": "Realtor Pal Admin",
-    "site_header": "Realtor Pal",
-    "site_brand": "Realtor Pal",
+    "site_title": "Lily White Realestate Admin",
+    "site_header": "Lily White Realestate",
+    "site_brand": "Lily White Realestate",
     "site_logo": None,
-    "welcome_sign": "Welcome to Realtor Pal Admin",
-    "copyright": "Realtor Pal Ltd",
+    "welcome_sign": "Welcome to Lily White Realestate Admin",
+    "copyright": "Lily White Realestate Ltd",
     "search_model": ["properties.Property", "leads.Lead", "blog.BlogPost"],
     
     "topmenu_links": [

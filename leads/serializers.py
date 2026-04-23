@@ -8,6 +8,7 @@ class LeadSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'first_name', 'last_name', 'email', 'phone',
             'inquiry_type', 'location', 'subject', 'message',
+            'budget', 'property_type_interest',
             'source', 'related_property', 'status', 'created_at'
         ]
         read_only_fields = ['id', 'status', 'created_at']

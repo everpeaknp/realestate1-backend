@@ -58,19 +58,39 @@ class ChatbotViewSet(viewsets.ViewSet):
         if updated:
             session.save()
 
-            # Also create a Lead so user info appears in Leads & Inquiries
+            # Create a Lead with user info + extract preferences from message
             from leads.models import Lead
             name_parts = user_name.split(' ', 1) if user_name else ['Chat', 'User']
+
+            # Extract preferences from the message
+            budget = ''
+            prop_type = ''
+            msg_lower = message.lower()
+
+            # Budget extraction
+            import re
+            budget_match = re.search(r'\$?([\d,]+)\s*(?:k|thousand|lakh|crore|million)?', msg_lower)
+            if budget_match:
+                budget = f"~{budget_match.group(0).strip()}"
+
+            # Property type extraction
+            for pt in ['apartment', 'house', 'villa', 'condo', 'land', 'plot', 'flat', 'studio', 'bhk', 'bhk']:
+                if pt in msg_lower:
+                    prop_type = pt.upper()
+                    break
+
             Lead.objects.get_or_create(
                 email=user_email or f'{session_id}@chat.local',
                 defaults={
-                    'first_name':   name_parts[0],
-                    'last_name':    name_parts[1] if len(name_parts) > 1 else '',
-                    'phone':        user_phone,
-                    'inquiry_type': 'GENERAL',
-                    'source':       'CHATBOT',
-                    'message':      f'Chat session started. Session ID: {session_id}',
-                    'subject':      'Chat Inquiry',
+                    'first_name':            name_parts[0],
+                    'last_name':             name_parts[1] if len(name_parts) > 1 else '',
+                    'phone':                 user_phone,
+                    'inquiry_type':          'GENERAL',
+                    'source':                'CHATBOT',
+                    'message':               f'Chat session started. First message: {message}',
+                    'subject':               'Chat Inquiry',
+                    'budget':                budget,
+                    'property_type_interest': prop_type,
                 }
             )
         

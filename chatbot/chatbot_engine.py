@@ -249,7 +249,7 @@ class ChatbotEngine:
 
     def _handle_greeting(self, message, entities, sentiment):
         return random.choice([
-            "Hello! Welcome to Realtor Pal. How can I help you find your perfect property today?",
+            "Hello! Welcome to Lily White Realestate. How can I help you find your perfect property today?",
             "Hi there! I'm your real estate assistant. Looking to buy, rent, or sell? Just ask!",
             "Welcome! I can help you explore our properties, connect with agents, or answer any real estate questions.",
         ])
@@ -499,7 +499,7 @@ class ChatbotEngine:
 
         total = Property.objects.filter(status='AVAILABLE').count()
         return (
-            f"I'm your Realtor Pal assistant! We currently have {total} available properties.\n\n"
+            f"I'm your Lily White Realestate assistant! We currently have {total} available properties.\n\n"
             "You can ask me things like:\n"
             "[search] Show me 3-bedroom homes under $300,000\n"
             "[map-pin] What properties are available in Los Angeles?\n"

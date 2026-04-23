@@ -29,7 +29,7 @@ POST /api/chatbot/chat/
 **Response:**
 ```json
 {
-  "response": "Hello! Welcome to Realtor Pal...",
+  "response": "Hello! Welcome to Lily White Realestate...",
   "session_id": "abc123...",
   "intent": "property_search",
   "confidence": 0.85

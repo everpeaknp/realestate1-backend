@@ -1,6 +1,6 @@
-# Realtor Pal Backend
+# Lily White Realestate Backend
 
-Django REST API backend for the Realtor Pal real estate platform with Jazzmin admin theme.
+Django REST API backend for the Lily White Realestate real estate platform with Jazzmin admin theme.
 
 ## Features
 

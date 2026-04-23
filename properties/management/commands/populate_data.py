@@ -16,7 +16,7 @@ import random
 
 
 class Command(BaseCommand):
-    help = 'Populate database with sample data for Realtor Pal'
+    help = 'Populate database with sample data for Lily White Realestate'
 
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS('Starting data population...'))
@@ -329,7 +329,7 @@ class Command(BaseCommand):
             {
                 'client_name': 'Emily Davis',
                 'rating': 5,
-                'content': 'As a first-time buyer, I was nervous about the process. The team at Realtor Pal guided me every step of the way. Thank you!',
+                'content': 'As a first-time buyer, I was nervous about the process. The team at Lily White Realestate guided me every step of the way. Thank you!',
                 'property_type': 'Starter Home',
                 'is_approved': True,
                 'is_featured': False

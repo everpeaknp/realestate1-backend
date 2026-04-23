@@ -33,6 +33,17 @@ class LeadViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    @action(detail=False, methods=['post'], url_path='valuation')
+    def valuation(self, request):
+        """What's My Home Worth form submission"""
+        data = request.data.copy()
+        data['source'] = 'VALUATION'
+        data.setdefault('inquiry_type', 'SELLING')
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 class NewsletterSubscriptionViewSet(
     mixins.CreateModelMixin,
