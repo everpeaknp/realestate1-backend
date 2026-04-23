@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'chatbot',
     'services',
     'about',
+    'contact',
 ]
 
 MIDDLEWARE = [
@@ -182,6 +183,7 @@ JAZZMIN_SETTINGS = {
         "chatbot",
         "services",
         "about",
+        "contact",
     ],
     
     "icons": {
@@ -205,6 +207,8 @@ JAZZMIN_SETTINGS = {
         "services.ServiceFeature": "fas fa-check-circle",
         "about.Goal": "fas fa-bullseye",
         "about.ServicesProvide": "fas fa-hands-helping",
+        "contact.ContactCard": "fas fa-address-card",
+        "contact.ContactFormSettings": "fas fa-cog",
     },
 
     "custom_links": {
