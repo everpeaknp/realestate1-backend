@@ -1,6 +1,54 @@
 from django.db import models
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator
+from ckeditor_uploader.fields import RichTextUploadingField
+
+
+class BlogCategory(models.Model):
+    """Blog category model"""
+    
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+    description = models.TextField(blank=True, help_text="Category description")
+    order = models.PositiveIntegerField(default=0, help_text="Display order")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = 'Category'
+        verbose_name_plural = 'Categories'
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class BlogTag(models.Model):
+    """Blog tag model"""
+    
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=50, unique=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Tag'
+        verbose_name_plural = 'Tags'
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
 
 
 class BlogPost(models.Model):
@@ -9,16 +57,41 @@ class BlogPost(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     excerpt = models.TextField(max_length=500, help_text="Short description for listing pages")
-    content = models.TextField(help_text="Full blog post content (supports HTML)")
-    featured_image = models.URLField(max_length=500)
+    content = RichTextUploadingField(
+        config_name='blog',
+        help_text="Full blog post content with rich text editor"
+    )
+    featured_image = models.ImageField(
+        upload_to='blog/featured/',
+        blank=True,
+        null=True,
+        help_text="Featured image for the blog post"
+    )
     
     # Author information
     author_name = models.CharField(max_length=100, default="Admin")
-    author_avatar = models.URLField(max_length=500, blank=True, null=True)
+    author_avatar = models.ImageField(
+        upload_to='blog/avatars/',
+        blank=True,
+        null=True,
+        help_text="Author avatar image"
+    )
     
     # Categorization
-    category = models.CharField(max_length=100, default="Real Estate")
-    tags = models.JSONField(default=list, blank=True, help_text="List of tags")
+    category = models.ForeignKey(
+        BlogCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='posts',
+        help_text="Blog category"
+    )
+    tags = models.ManyToManyField(
+        BlogTag,
+        blank=True,
+        related_name='posts',
+        help_text="Blog tags"
+    )
     
     # Metadata
     views = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)])
@@ -49,6 +122,44 @@ class BlogPost(models.Model):
         return self.comments.filter(status='APPROVED').count()
 
 
+class BlogGalleryImage(models.Model):
+    """Media library for blog images"""
+    
+    post = models.ForeignKey(BlogPost, on_delete=models.CASCADE, related_name='gallery_images', null=True, blank=True)
+    image = models.ImageField(upload_to='blog/gallery/', help_text="Upload image")
+    caption = models.CharField(max_length=200, blank=True, help_text="Optional image caption")
+    alt_text = models.CharField(max_length=200, blank=True, help_text="Alt text for accessibility")
+    order = models.PositiveIntegerField(default=0, help_text="Display order")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Media'
+        verbose_name_plural = 'Media'
+    
+    def __str__(self):
+        if self.post:
+            return f"Media for {self.post.title}"
+        return f"Media - {self.image.name}"
+    
+    @property
+    def file_size(self):
+        """Get file size in KB"""
+        try:
+            return f"{self.image.size / 1024:.1f} KB"
+        except:
+            return "N/A"
+    
+    @property
+    def file_name(self):
+        """Get file name"""
+        try:
+            return self.image.name.split('/')[-1]
+        except:
+            return "N/A"
+
+
 class Comment(models.Model):
     """Comment model for blog posts"""
     
@@ -63,7 +174,12 @@ class Comment(models.Model):
     # Author information
     author_name = models.CharField(max_length=100)
     author_email = models.EmailField()
-    author_avatar = models.URLField(max_length=500, blank=True, null=True)
+    author_avatar = models.ImageField(
+        upload_to='blog/comment_avatars/',
+        blank=True,
+        null=True,
+        help_text="Comment author avatar"
+    )
     
     content = models.TextField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')

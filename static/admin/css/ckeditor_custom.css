@@ -1,0 +1,41 @@
+/* Custom CKEditor Fullscreen Styling */
+
+/* Make the Maximize button more prominent */
+.cke_button__maximize {
+    background-color: #4CAF50 !important;
+    border-radius: 3px;
+}
+
+.cke_button__maximize:hover {
+    background-color: #45a049 !important;
+}
+
+/* Fullscreen mode styling */
+.cke_maximized {
+    z-index: 10000 !important;
+}
+
+.cke_maximized .cke_contents {
+    height: calc(100vh - 100px) !important;
+}
+
+/* Add visual indicator when in fullscreen */
+.cke_maximized .cke_top {
+    background: #2c3e50 !important;
+}
+
+/* Make toolbar buttons more visible in fullscreen */
+.cke_maximized .cke_toolbar {
+    background: #34495e !important;
+}
+
+/* Improve editor visibility */
+.cke_chrome {
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Resize handle styling */
+.cke_resizer {
+    border-color: #4CAF50 !important;
+}

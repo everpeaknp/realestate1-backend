@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
+    'ckeditor',
+    'ckeditor_uploader',
     
     # Local apps
     'properties',
@@ -212,8 +214,8 @@ JAZZMIN_SETTINGS = {
     "default_icon_children": "fas fa-circle",
     
     "related_modal_active": False,
-    "custom_css": None,
-    "custom_js": None,
+    "custom_css": "admin/css/ckeditor_custom.css",
+    "custom_js": "admin/js/ckeditor_fullscreen.js",
     "use_google_fonts_cdn": True,
     "show_ui_builder": False,
     
@@ -254,4 +256,61 @@ JAZZMIN_UI_TWEAKS = {
         "danger": "btn-danger",
         "success": "btn-success"
     }
+}
+
+
+# CKEditor Configuration
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_IMAGE_BACKEND = "pillow"
+CKEDITOR_JQUERY_URL = 'https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js'
+
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 400,
+        'width': '100%',
+        'extraPlugins': ','.join([
+            'uploadimage',
+            'image2',
+            'codesnippet',
+            'maximize',
+        ]),
+    },
+    'blog': {
+        'toolbar': 'Custom',
+        'toolbar_Custom': [
+            ['Maximize', 'Source', '-', 'Preview'],
+            ['Cut', 'Copy', 'Paste', 'PasteText', 'PasteFromWord', '-', 'Undo', 'Redo'],
+            ['Find', 'Replace', '-', 'SelectAll', 'RemoveFormat'],
+            '/',
+            ['Bold', 'Italic', 'Underline', 'Strike', 'Subscript', 'Superscript'],
+            ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', 'Blockquote'],
+            ['JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock'],
+            ['Link', 'Unlink', 'Anchor'],
+            '/',
+            ['Image', 'Table', 'HorizontalRule', 'SpecialChar', 'Iframe'],
+            ['Format', 'Font', 'FontSize'],
+            ['TextColor', 'BGColor'],
+            ['CodeSnippet'],
+        ],
+        'height': 600,
+        'width': '100%',
+        'resize_enabled': True,
+        'resize_dir': 'both',
+        'resize_minWidth': 400,
+        'resize_minHeight': 400,
+        'resize_maxWidth': 3000,
+        'resize_maxHeight': 3000,
+        'removeDialogTabs': 'image:advanced;link:advanced',
+        'extraPlugins': ','.join([
+            'uploadimage',
+            'image2',
+            'codesnippet',
+            'maximize',
+            'preview',
+        ]),
+        'codeSnippet_theme': 'monokai_sublime',
+        'image2_alignClasses': ['image-left', 'image-center', 'image-right'],
+        'image2_disableResizer': False,
+    },
 }

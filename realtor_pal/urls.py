@@ -8,6 +8,9 @@ from leads.urls import newsletter_urlpatterns
 urlpatterns = [
     path('admin/', admin.site.urls),
 
+    # CKEditor upload URLs (required for RichTextUploadingField)
+    path('ckeditor/', include('ckeditor_uploader.urls')),
+
     # API endpoints
     path('api/properties/', include('properties.urls')),
     path('api/leads/', include('leads.urls')),
