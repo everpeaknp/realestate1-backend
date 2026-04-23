@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'faqs',
     'agents',
     'chatbot',
+    'services',
 ]
 
 MIDDLEWARE = [
@@ -178,6 +179,7 @@ JAZZMIN_SETTINGS = {
         "faqs",
         "agents",
         "chatbot",
+        "services",
     ],
     
     "icons": {
@@ -197,6 +199,8 @@ JAZZMIN_SETTINGS = {
         "chatbot.ChatMessage": "fas fa-comment-dots",
         "chatbot.KnowledgeBase": "fas fa-brain",
         "chatbot.ChatbotRule": "fas fa-code-branch",
+        "services.Service": "fas fa-concierge-bell",
+        "services.ServiceFeature": "fas fa-check-circle",
     },
 
     "custom_links": {
