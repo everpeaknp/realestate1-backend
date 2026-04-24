@@ -1,6 +1,48 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import FAQ
+from .models import FAQ, FAQsHeroSettings
+
+
+@admin.register(FAQsHeroSettings)
+class FAQsHeroSettingsAdmin(admin.ModelAdmin):
+    """Admin for FAQs Hero Settings (Singleton)"""
+    list_display = ('title', 'subtitle', 'is_active', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'background_preview')
+    
+    fieldsets = (
+        ('Hero Content', {
+            'fields': ('title', 'subtitle')
+        }),
+        ('Background Image', {
+            'fields': ('background_image', 'background_image_url', 'background_preview'),
+            'description': 'Upload an image or provide a URL. Uploaded image takes priority.'
+        }),
+        ('Display Settings', {
+            'fields': ('is_active',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def background_preview(self, obj):
+        url = obj.background_url
+        if url:
+            return format_html(
+                '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
+                url
+            )
+        return format_html('<p style="color: #999;">No background image</p>')
+    background_preview.short_description = 'Background Preview'
+    
+    def has_add_permission(self, request):
+        # Only allow one instance (singleton)
+        return not FAQsHeroSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the singleton instance
+        return False
 
 
 @admin.register(FAQ)

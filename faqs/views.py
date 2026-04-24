@@ -1,8 +1,19 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import FAQ
-from .serializers import FAQSerializer
+from rest_framework.permissions import AllowAny
+from .models import FAQ, FAQsHeroSettings
+from .serializers import FAQSerializer, FAQsHeroSettingsSerializer
+
+
+class FAQsHeroSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for FAQs hero settings.
+    Returns the singleton FAQs hero settings.
+    """
+    queryset = FAQsHeroSettings.objects.filter(is_active=True).order_by('-updated_at')
+    serializer_class = FAQsHeroSettingsSerializer
+    permission_classes = [AllowAny]
 
 
 class FAQViewSet(viewsets.ReadOnlyModelViewSet):

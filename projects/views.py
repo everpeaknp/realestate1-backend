@@ -1,8 +1,19 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Project
-from .serializers import ProjectSerializer
+from rest_framework.permissions import AllowAny
+from .models import Project, ProjectsHeroSettings
+from .serializers import ProjectSerializer, ProjectsHeroSettingsSerializer
+
+
+class ProjectsHeroSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for projects hero settings.
+    Returns the singleton projects hero settings.
+    """
+    queryset = ProjectsHeroSettings.objects.filter(is_active=True).order_by('-updated_at')
+    serializer_class = ProjectsHeroSettingsSerializer
+    permission_classes = [AllowAny]
 
 
 class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
