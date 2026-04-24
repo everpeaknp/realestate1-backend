@@ -1,8 +1,19 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Testimonial
-from .serializers import TestimonialSerializer
+from rest_framework.permissions import AllowAny
+from .models import Testimonial, TestimonialsHeroSettings
+from .serializers import TestimonialSerializer, TestimonialsHeroSettingsSerializer
+
+
+class TestimonialsHeroSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for testimonials hero settings.
+    Returns the singleton testimonials hero settings.
+    """
+    queryset = TestimonialsHeroSettings.objects.filter(is_active=True).order_by('-updated_at')
+    serializer_class = TestimonialsHeroSettingsSerializer
+    permission_classes = [AllowAny]
 
 
 class TestimonialViewSet(viewsets.ModelViewSet):
