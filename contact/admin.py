@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.html import format_html
 from .models import ContactCard, ContactFormSettings
 
 
@@ -34,14 +35,15 @@ class ContactCardAdmin(admin.ModelAdmin):
 
 @admin.register(ContactFormSettings)
 class ContactFormSettingsAdmin(admin.ModelAdmin):
-    list_display = ['agent_name', 'agent_title', 'is_active']
+    list_display = ['agent_name', 'agent_title', 'image_preview', 'is_active']
+    readonly_fields = ['image_preview']
     
     fieldsets = (
         ('Introduction', {
             'fields': ('intro_text',)
         }),
         ('Agent Information', {
-            'fields': ('agent_name', 'agent_title', 'agent_image')
+            'fields': ('agent_name', 'agent_title', 'agent_image', 'image_preview')
         }),
         ('Social Media Links', {
             'fields': ('facebook_url', 'twitter_url', 'instagram_url', 'linkedin_url')
@@ -50,6 +52,16 @@ class ContactFormSettingsAdmin(admin.ModelAdmin):
             'fields': ('is_active',)
         }),
     )
+    
+    def image_preview(self, obj):
+        """Display a preview of the agent image"""
+        if obj.agent_image:
+            return format_html(
+                '<img src="{}" style="max-height: 200px; max-width: 200px; border-radius: 8px;" />',
+                obj.agent_image.url
+            )
+        return "No image uploaded"
+    image_preview.short_description = 'Image Preview'
     
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)

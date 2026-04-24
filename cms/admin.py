@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink
+from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink, NewsletterSettings, PropertySidebarSettings
 
 
 @admin.register(HeaderSettings)
@@ -116,3 +116,51 @@ class FooterLinkAdmin(admin.ModelAdmin):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'{updated} footer link(s) deactivated.')
     deactivate_links.short_description = 'Deactivate selected footer links'
+
+
+@admin.register(NewsletterSettings)
+class NewsletterSettingsAdmin(admin.ModelAdmin):
+    list_display = ['title', 'is_active']
+    
+    fieldsets = (
+        ('Newsletter Content', {
+            'fields': ('title', 'description')
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Only allow one instance (singleton pattern)
+        return not NewsletterSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the singleton instance
+        return False
+
+
+@admin.register(PropertySidebarSettings)
+class PropertySidebarSettingsAdmin(admin.ModelAdmin):
+    list_display = ['form_title', 'default_agent', 'is_active']
+    
+    fieldsets = (
+        ('Form Settings', {
+            'fields': ('form_title',)
+        }),
+        ('Default Agent', {
+            'fields': ('default_agent',),
+            'description': 'Select the default agent to display in property sidebars'
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Only allow one instance (singleton pattern)
+        return not PropertySidebarSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the singleton instance
+        return False

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink
+from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink, NewsletterSettings, PropertySidebarSettings
 
 
 class NavigationLinkSerializer(serializers.ModelSerializer):
@@ -58,3 +58,29 @@ class FooterSettingsSerializer(serializers.ModelSerializer):
     def get_footer_links(self, obj):
         links = FooterLink.objects.filter(is_active=True).order_by('order')
         return FooterLinkSerializer(links, many=True).data
+
+
+class NewsletterSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NewsletterSettings
+        fields = ['id', 'title', 'description', 'is_active']
+
+
+class PropertySidebarSettingsSerializer(serializers.ModelSerializer):
+    default_agent = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = PropertySidebarSettings
+        fields = ['id', 'form_title', 'default_agent', 'is_active']
+    
+    def get_default_agent(self, obj):
+        if obj.default_agent:
+            return {
+                'id': obj.default_agent.id,
+                'name': obj.default_agent.name,
+                'email': obj.default_agent.email,
+                'phone': obj.default_agent.phone,
+                'avatar': obj.default_agent.avatar,
+                'bio': obj.default_agent.bio,
+            }
+        return None

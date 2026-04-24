@@ -173,7 +173,7 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     "navigation_expanded": True,
     "hide_apps": [],
-    "hide_models": ["home.Benefit", "home.BenefitGalleryImage", "home.BenefitsContactInfo"],
+    "hide_models": [],
     "order_with_respect_to": [
         "properties",
         "leads",
@@ -208,7 +208,6 @@ JAZZMIN_SETTINGS = {
         "chatbot.KnowledgeBase": "fas fa-brain",
         "chatbot.ChatbotRule": "fas fa-code-branch",
         "services.Service": "fas fa-concierge-bell",
-        "services.ServiceFeature": "fas fa-check-circle",
         "about.Goal": "fas fa-bullseye",
         "about.ServicesProvide": "fas fa-hands-helping",
         "contact.ContactCard": "fas fa-address-card",
@@ -221,9 +220,7 @@ JAZZMIN_SETTINGS = {
         "home.HeroCard": "fas fa-th-large",
         "home.HowItWorksStep": "fas fa-tasks",
         "home.Neighborhood": "fas fa-map-marked-alt",
-        "home.Benefit": "fas fa-check",
-        "home.BenefitGalleryImage": "fas fa-images",
-        "home.BenefitsContactInfo": "fas fa-phone",
+        "home.BenefitsSection": "fas fa-star",
         "home.ContactSectionSettings": "fas fa-id-card",
         "home.InstagramImage": "fab fa-instagram",
         "home.PersonSectionSettings": "fas fa-user-circle",
@@ -239,29 +236,6 @@ JAZZMIN_SETTINGS = {
                 "permissions": ["leads.view_lead"],
             }
         ],
-        "home": [
-            {
-                "name": "Benefits Section",
-                "icon": "fas fa-check-circle",
-                "children": [
-                    {
-                        "name": "Benefit Items",
-                        "url": "/admin/home/benefit/",
-                        "icon": "fas fa-check",
-                    },
-                    {
-                        "name": "Gallery Images",
-                        "url": "/admin/home/benefitgalleryimage/",
-                        "icon": "fas fa-images",
-                    },
-                    {
-                        "name": "Contact Info",
-                        "url": "/admin/home/benefitscontactinfo/",
-                        "icon": "fas fa-phone",
-                    },
-                ]
-            }
-        ],
     },
     
     "default_icon_parents": "fas fa-chevron-circle-right",
@@ -273,10 +247,10 @@ JAZZMIN_SETTINGS = {
     "use_google_fonts_cdn": True,
     "show_ui_builder": False,
     
-    "changeform_format": "horizontal_tabs",
+    "changeform_format": "collapsible",
     "changeform_format_overrides": {
         "auth.user": "collapsible",
-        "auth.group": "vertical_tabs"
+        "auth.group": "collapsible"
     },
 }
 

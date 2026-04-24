@@ -4,7 +4,7 @@ from django.db import models
 class HeaderSettings(models.Model):
     """Singleton model for header settings"""
     logo_image = models.ImageField(upload_to='cms/logos/', blank=True, null=True, help_text="Upload a custom logo image (optional)")
-    logo_text = models.CharField(max_length=100, default="Realtor Pal")
+    logo_text = models.CharField(max_length=100, default="Lily White Realestate")
     phone_number = models.CharField(max_length=50, default="+1 (321) 456 7890")
     is_active = models.BooleanField(default=True)
     
@@ -48,10 +48,10 @@ class NavigationLink(models.Model):
 class FooterSettings(models.Model):
     """Singleton model for footer settings"""
     logo_image = models.ImageField(upload_to='cms/logos/', blank=True, null=True, help_text="Upload a custom logo image (optional)")
-    logo_text = models.CharField(max_length=100, default="Realtor Pal")
+    logo_text = models.CharField(max_length=100, default="Lily White Realestate")
     phone_number = models.CharField(max_length=50, default="+1 (321) 456 7890")
     email = models.EmailField(default="hello@example.com")
-    copyright_text = models.CharField(max_length=200, default="2026 Realtor Pal. All rights reserved.")
+    copyright_text = models.CharField(max_length=200, default="2026 Lily White Realestate. All rights reserved.")
     facebook_url = models.URLField(max_length=200, blank=True, default="#")
     twitter_url = models.URLField(max_length=200, blank=True, default="#")
     instagram_url = models.URLField(max_length=200, blank=True, default="#")
@@ -93,3 +93,64 @@ class FooterLink(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.href})"
+
+
+class NewsletterSettings(models.Model):
+    """Singleton model for newsletter section settings"""
+    title = models.CharField(max_length=200, default="Subscribe to my newsletter")
+    description = models.TextField(default="Get the most recent information on real estate.")
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Newsletter Settings'
+        verbose_name_plural = 'Newsletter Settings'
+    
+    def __str__(self):
+        return "Newsletter Settings"
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton pattern)
+        if not self.pk and NewsletterSettings.objects.exists():
+            existing = NewsletterSettings.objects.first()
+            self.pk = existing.pk
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance"""
+        settings, created = cls.objects.get_or_create(pk=1)
+        return settings
+
+
+class PropertySidebarSettings(models.Model):
+    """Singleton model for property sidebar settings"""
+    form_title = models.CharField(max_length=200, default="Contact For Your Real Estate Solutions")
+    default_agent = models.ForeignKey(
+        'agents.Agent',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sidebar_settings',
+        help_text="Default agent to display in property sidebar"
+    )
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Property Sidebar Settings'
+        verbose_name_plural = 'Property Sidebar Settings'
+    
+    def __str__(self):
+        return "Property Sidebar Settings"
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton pattern)
+        if not self.pk and PropertySidebarSettings.objects.exists():
+            existing = PropertySidebarSettings.objects.first()
+            self.pk = existing.pk
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance"""
+        settings, created = cls.objects.get_or_create(pk=1)
+        return settings

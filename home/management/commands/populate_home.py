@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.core.files.base import ContentFile
 from home.models import (
     HeroSettings, HeroCard, HowItWorksStep, Neighborhood,
-    Benefit, BenefitGalleryImage, BenefitsContactInfo,
+    Benefit, BenefitGalleryImage, BenefitsSection,
     ContactSectionSettings, InstagramImage, PersonSectionSettings, StatItem
 )
 import requests
@@ -187,6 +187,18 @@ class Command(BaseCommand):
     def create_benefits(self):
         """Create benefits"""
         self.stdout.write('Creating benefits and gallery...')
+        
+        # Get or create BenefitsSection first
+        benefits_section, _ = BenefitsSection.objects.get_or_create(
+            defaults={
+                'title': 'Why Choose Us',
+                'description': 'My objective is to not only have a good impact on ourselves and our families but also to inspire, encourage, and affect long-term change in everyone we meet.',
+                'phone': '+1 (321) 456 7890',
+                'email': 'hello@example.com',
+                'is_active': True
+            }
+        )
+        
         benefits = [
             'Over 12 years of experience in real estate',
             'Personalized service for every client',
@@ -195,7 +207,11 @@ class Command(BaseCommand):
         ]
         
         for idx, text in enumerate(benefits, 1):
-            Benefit.objects.create(text=text, order=idx)
+            Benefit.objects.create(
+                benefits_section=benefits_section,
+                text=text,
+                order=idx
+            )
         
         # Create gallery images
         gallery_urls = [
@@ -206,6 +222,7 @@ class Command(BaseCommand):
         
         for idx, url in enumerate(gallery_urls, 1):
             gallery = BenefitGalleryImage.objects.create(
+                benefits_section=benefits_section,
                 alt_text=f'Gallery Image {idx}',
                 order=idx
             )
@@ -216,16 +233,9 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'✓ Created {len(benefits)} benefits and {len(gallery_urls)} gallery images'))
 
     def create_benefits_contact(self):
-        """Create benefits contact info"""
-        self.stdout.write('Creating benefits contact info...')
-        BenefitsContactInfo.objects.get_or_create(
-            defaults={
-                'phone': '+1 (321) 456 7890',
-                'email': 'hello@example.com',
-                'is_active': True
-            }
-        )
-        self.stdout.write(self.style.SUCCESS('✓ Benefits contact info created'))
+        """Create benefits section (already created in create_benefits)"""
+        # This is now handled in create_benefits method
+        pass
 
     def create_contact_section(self):
         """Create contact section settings"""

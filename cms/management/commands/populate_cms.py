@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from cms.models import HeaderSettings, NavigationLink, FooterSettings, FooterLink
+from cms.models import HeaderSettings, NavigationLink, FooterSettings, FooterLink, NewsletterSettings, PropertySidebarSettings
 
 
 class Command(BaseCommand):
@@ -12,7 +12,7 @@ class Command(BaseCommand):
         header_settings, created = HeaderSettings.objects.get_or_create(
             pk=1,
             defaults={
-                'logo_text': 'Realtor Pal',
+                'logo_text': 'Lily White Realestate',
                 'phone_number': '+1 (321) 456 7890',
                 'is_active': True,
             }
@@ -47,10 +47,10 @@ class Command(BaseCommand):
         footer_settings, created = FooterSettings.objects.get_or_create(
             pk=1,
             defaults={
-                'logo_text': 'Realtor Pal',
+                'logo_text': 'Lily White Realestate',
                 'phone_number': '+1 (321) 456 7890',
                 'email': 'hello@example.com',
-                'copyright_text': '2026 Realtor Pal. All rights reserved.',
+                'copyright_text': '2026 Lily White Realestate. All rights reserved.',
                 'facebook_url': '#',
                 'twitter_url': '#',
                 'instagram_url': '#',
@@ -83,5 +83,45 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f'Created footer link: {link.name}'))
             else:
                 self.stdout.write(self.style.WARNING(f'Footer link already exists: {link.name}'))
+        
+        # Create newsletter settings (singleton)
+        newsletter_settings, created = NewsletterSettings.objects.get_or_create(
+            pk=1,
+            defaults={
+                'title': 'Subscribe to my newsletter',
+                'description': 'Get the most recent information on real estate.',
+                'is_active': True,
+            }
+        )
+        
+        if created:
+            self.stdout.write(self.style.SUCCESS('Created newsletter settings'))
+        else:
+            self.stdout.write(self.style.WARNING('Newsletter settings already exist'))
+        
+        # Create property sidebar settings (singleton)
+        sidebar_settings, created = PropertySidebarSettings.objects.get_or_create(
+            pk=1,
+            defaults={
+                'form_title': 'Contact For Your Real Estate Solutions',
+                'is_active': True,
+            }
+        )
+        
+        if created:
+            self.stdout.write(self.style.SUCCESS('Created property sidebar settings'))
+        else:
+            self.stdout.write(self.style.WARNING('Property sidebar settings already exist'))
+        
+        # Set default agent if one exists and not already set
+        if not sidebar_settings.default_agent:
+            from agents.models import Agent
+            first_agent = Agent.objects.filter(is_active=True).first()
+            if first_agent:
+                sidebar_settings.default_agent = first_agent
+                sidebar_settings.save()
+                self.stdout.write(self.style.SUCCESS(f'Set default agent: {first_agent.name}'))
+            else:
+                self.stdout.write(self.style.WARNING('No active agents found to set as default'))
         
         self.stdout.write(self.style.SUCCESS('CMS data population complete!'))

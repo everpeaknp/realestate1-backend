@@ -250,8 +250,8 @@ class ChatbotEngine:
     def _handle_greeting(self, message, entities, sentiment):
         return random.choice([
             "Hello! Welcome to Lily White Realestate. How can I help you find your perfect property today?",
-            "Hi there! I'm your real estate assistant. Looking to buy, rent, or sell? Just ask!",
-            "Welcome! I can help you explore our properties, connect with agents, or answer any real estate questions.",
+            "Hi there! I'm your Lily White Realestate assistant. Looking to buy, rent, or sell? Just ask!",
+            "Welcome to Lily White Realestate! I can help you explore our properties, connect with agents, or answer any real estate questions.",
         ])
 
     def _handle_goodbye(self, message, entities, sentiment):

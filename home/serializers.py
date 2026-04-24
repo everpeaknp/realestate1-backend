@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     HeroSettings, HeroCard, HowItWorksStep, Neighborhood,
-    Benefit, BenefitGalleryImage, BenefitsContactInfo,
+    Benefit, BenefitGalleryImage, BenefitsSection,
     ContactSectionSettings, InstagramImage, PersonSectionSettings, StatItem
 )
 
@@ -74,10 +74,10 @@ class BenefitGalleryImageSerializer(serializers.ModelSerializer):
         return None
 
 
-class BenefitsContactInfoSerializer(serializers.ModelSerializer):
+class BenefitsSectionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BenefitsContactInfo
-        fields = ['id', 'phone', 'email', 'is_active']
+        model = BenefitsSection
+        fields = ['id', 'title', 'description', 'phone', 'email', 'is_active']
 
 
 class ContactSectionSettingsSerializer(serializers.ModelSerializer):

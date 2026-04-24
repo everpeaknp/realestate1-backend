@@ -3,13 +3,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import (
     HeroSettings, HeroCard, HowItWorksStep, Neighborhood,
-    Benefit, BenefitGalleryImage, BenefitsContactInfo,
+    Benefit, BenefitGalleryImage, BenefitsSection,
     ContactSectionSettings, InstagramImage, PersonSectionSettings, StatItem
 )
 from .serializers import (
     HeroSettingsSerializer, HeroCardSerializer, HowItWorksStepSerializer,
     NeighborhoodSerializer, BenefitSerializer, BenefitGalleryImageSerializer,
-    BenefitsContactInfoSerializer, ContactSectionSettingsSerializer,
+    BenefitsSectionSerializer, ContactSectionSettingsSerializer,
     InstagramImageSerializer, PersonSectionSettingsSerializer, StatItemSerializer
 )
 
@@ -69,12 +69,12 @@ class BenefitGalleryImageViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BenefitGalleryImageSerializer
 
 
-class BenefitsContactInfoViewSet(viewsets.ReadOnlyModelViewSet):
+class BenefitsSectionViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    API endpoint for benefits contact info (singleton)
+    API endpoint for benefits section (singleton)
     """
-    queryset = BenefitsContactInfo.objects.filter(is_active=True)
-    serializer_class = BenefitsContactInfoSerializer
+    queryset = BenefitsSection.objects.filter(is_active=True)
+    serializer_class = BenefitsSectionSerializer
 
     def list(self, request, *args, **kwargs):
         instance = self.queryset.first()

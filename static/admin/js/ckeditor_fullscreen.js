@@ -38,3 +38,37 @@
         });
     }
 })();
+
+// Prevent auto-scroll to top when clicking sidebar menu items
+(function() {
+    'use strict';
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Find all sidebar menu links
+        var sidebarLinks = document.querySelectorAll('.sidebar-menu a, .nav-sidebar a');
+        
+        sidebarLinks.forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                // Only prevent scroll if it's a collapsible menu item (has submenu)
+                if (this.classList.contains('has-treeview') || this.getAttribute('data-toggle') === 'collapse') {
+                    // Store current scroll position
+                    var scrollPos = window.pageYOffset || document.documentElement.scrollTop;
+                    
+                    // After a short delay, restore scroll position
+                    setTimeout(function() {
+                        window.scrollTo(0, scrollPos);
+                    }, 10);
+                }
+            });
+        });
+        
+        // Prevent Jazzmin's default scroll behavior
+        var style = document.createElement('style');
+        style.textContent = `
+            html {
+                scroll-behavior: auto !important;
+            }
+        `;
+        document.head.appendChild(style);
+    });
+})();

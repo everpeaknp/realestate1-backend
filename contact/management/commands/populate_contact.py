@@ -50,7 +50,7 @@ class Command(BaseCommand):
                 'intro_text': "If you have any questions about the real estate market, I'd love to chat. Reach out below, and I'll get back to you shortly. I look forward to hearing from you.",
                 'agent_name': 'Justin Nelson',
                 'agent_title': 'Boston Realtor',
-                'agent_image': 'https://www.realtorpal.hocud.com/wp-content/uploads/Realtor-Pal-Main-Agent-pro.png',
+                # agent_image will be uploaded via admin interface
                 'facebook_url': '#',
                 'twitter_url': '#',
                 'instagram_url': '#',

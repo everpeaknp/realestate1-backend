@@ -32,10 +32,11 @@ class ContactFormSettings(models.Model):
     )
     agent_name = models.CharField(max_length=100, default="Justin Nelson")
     agent_title = models.CharField(max_length=100, default="Boston Realtor")
-    agent_image = models.URLField(
-        max_length=500,
-        default="https://www.realtorpal.hocud.com/wp-content/uploads/Realtor-Pal-Main-Agent-pro.png",
-        help_text="URL to agent profile image"
+    agent_image = models.ImageField(
+        upload_to='contact/agents/',
+        blank=True,
+        null=True,
+        help_text="Upload agent profile image"
     )
     facebook_url = models.URLField(max_length=200, blank=True, default="#")
     twitter_url = models.URLField(max_length=200, blank=True, default="#")

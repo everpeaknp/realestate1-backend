@@ -1,10 +1,11 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink
+from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink, NewsletterSettings, PropertySidebarSettings
 from .serializers import (
     HeaderSettingsSerializer, NavigationLinkSerializer,
-    FooterSettingsSerializer, FooterLinkSerializer
+    FooterSettingsSerializer, FooterLinkSerializer, NewsletterSettingsSerializer,
+    PropertySidebarSettingsSerializer
 )
 
 
@@ -45,4 +46,24 @@ class FooterLinkViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = FooterLink.objects.filter(is_active=True).order_by('order')
     serializer_class = FooterLinkSerializer
+    permission_classes = [AllowAny]
+
+
+class NewsletterSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for newsletter settings.
+    Returns the singleton newsletter settings.
+    """
+    queryset = NewsletterSettings.objects.filter(is_active=True)
+    serializer_class = NewsletterSettingsSerializer
+    permission_classes = [AllowAny]
+
+
+class PropertySidebarSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for property sidebar settings.
+    Returns the singleton property sidebar settings with default agent.
+    """
+    queryset = PropertySidebarSettings.objects.filter(is_active=True)
+    serializer_class = PropertySidebarSettingsSerializer
     permission_classes = [AllowAny]

@@ -91,6 +91,13 @@ class Neighborhood(models.Model):
 
 class Benefit(models.Model):
     """Benefits list items"""
+    benefits_section = models.ForeignKey(
+        'BenefitsSection',
+        on_delete=models.CASCADE,
+        related_name='benefits',
+        null=True,
+        blank=True
+    )
     text = models.CharField(max_length=200)
     order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)
@@ -108,6 +115,13 @@ class Benefit(models.Model):
 
 class BenefitGalleryImage(models.Model):
     """Gallery images in benefits section"""
+    benefits_section = models.ForeignKey(
+        'BenefitsSection',
+        on_delete=models.CASCADE,
+        related_name='gallery_images',
+        null=True,
+        blank=True
+    )
     image = models.ImageField(upload_to='home/benefits/')
     alt_text = models.CharField(max_length=200, blank=True)
     order = models.IntegerField(default=0)
@@ -124,8 +138,10 @@ class BenefitGalleryImage(models.Model):
         return f'Gallery Image {self.id}'
 
 
-class BenefitsContactInfo(models.Model):
-    """Singleton model for benefits section contact info"""
+class BenefitsSection(models.Model):
+    """Singleton model for benefits section - manages all benefits components"""
+    title = models.CharField(max_length=200, default='Why Choose Us')
+    description = models.TextField(default='My objective is to not only have a good impact on ourselves and our families but also to inspire, encourage, and affect long-term change in everyone we meet.')
     phone = models.CharField(max_length=20)
     email = models.EmailField()
     is_active = models.BooleanField(default=True)
@@ -133,19 +149,19 @@ class BenefitsContactInfo(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Contact Info'
-        verbose_name_plural = 'Contact Info'
+        verbose_name = 'Benefits Section'
+        verbose_name_plural = 'Benefits Section'
 
     def save(self, *args, **kwargs):
-        if not self.pk and BenefitsContactInfo.objects.exists():
-            raise ValidationError('Only one Benefits Contact Info instance is allowed.')
+        if not self.pk and BenefitsSection.objects.exists():
+            raise ValidationError('Only one Benefits Section instance is allowed.')
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        raise ValidationError('Benefits Contact Info cannot be deleted.')
+        raise ValidationError('Benefits Section cannot be deleted.')
 
     def __str__(self):
-        return 'Benefits Contact Info'
+        return 'Benefits Section'
 
 
 class ContactSectionSettings(models.Model):

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     HeroSettings, HeroCard, HowItWorksStep, Neighborhood,
-    Benefit, BenefitGalleryImage, BenefitsContactInfo,
+    Benefit, BenefitGalleryImage, BenefitsSection,
     ContactSectionSettings, InstagramImage, PersonSectionSettings, StatItem
 )
 
@@ -68,28 +68,27 @@ class NeighborhoodAdmin(admin.ModelAdmin):
     ordering = ['order', 'id']
 
 
-@admin.register(Benefit)
-class BenefitAdmin(admin.ModelAdmin):
-    list_display = ['text', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
-    list_filter = ['is_active']
-    search_fields = ['text']
+class BenefitInline(admin.TabularInline):
+    model = Benefit
+    extra = 1
+    fields = ['text', 'order', 'is_active']
     ordering = ['order', 'id']
 
 
-@admin.register(BenefitGalleryImage)
-class BenefitGalleryImageAdmin(admin.ModelAdmin):
-    list_display = ['id', 'alt_text', 'order', 'is_active', 'created_at']
-    list_editable = ['order', 'is_active']
-    list_filter = ['is_active']
-    search_fields = ['alt_text']
+class BenefitGalleryImageInline(admin.TabularInline):
+    model = BenefitGalleryImage
+    extra = 1
+    fields = ['image', 'alt_text', 'order', 'is_active']
     ordering = ['order', 'id']
 
 
-@admin.register(BenefitsContactInfo)
-class BenefitsContactInfoAdmin(admin.ModelAdmin):
-    list_display = ['phone', 'email', 'is_active', 'updated_at']
+@admin.register(BenefitsSection)
+class BenefitsSectionAdmin(admin.ModelAdmin):
+    list_display = ['title', 'phone', 'email', 'is_active', 'updated_at']
     fieldsets = (
+        ('Section Content', {
+            'fields': ('title', 'description')
+        }),
         ('Contact Information', {
             'fields': ('phone', 'email')
         }),
@@ -97,9 +96,10 @@ class BenefitsContactInfoAdmin(admin.ModelAdmin):
             'fields': ('is_active',)
         }),
     )
+    inlines = [BenefitInline, BenefitGalleryImageInline]
 
     def has_add_permission(self, request):
-        return not BenefitsContactInfo.objects.exists()
+        return not BenefitsSection.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
         return False
