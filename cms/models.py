@@ -154,3 +154,49 @@ class PropertySidebarSettings(models.Model):
         """Get or create the singleton settings instance"""
         settings, created = cls.objects.get_or_create(pk=1)
         return settings
+
+
+class PropertiesHeroSettings(models.Model):
+    """Singleton model for properties page hero section"""
+    title = models.CharField(max_length=200, default="Properties")
+    subtitle = models.CharField(max_length=300, default="Find your dream homes with me.")
+    background_image = models.ImageField(
+        upload_to='cms/heroes/',
+        blank=True,
+        null=True,
+        help_text="Hero background image (recommended: 1920x600px)"
+    )
+    background_image_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1920",
+        help_text="Fallback to URL if no image uploaded"
+    )
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Properties Hero Settings'
+        verbose_name_plural = 'Properties Hero Settings'
+    
+    def __str__(self):
+        return "Properties Hero Settings"
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists (singleton pattern)
+        if not self.pk and PropertiesHeroSettings.objects.exists():
+            existing = PropertiesHeroSettings.objects.first()
+            self.pk = existing.pk
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton settings instance"""
+        settings, created = cls.objects.get_or_create(pk=1)
+        return settings
+    
+    @property
+    def background_url(self):
+        """Return uploaded image URL or fallback URL"""
+        if self.background_image:
+            return self.background_image.url
+        return self.background_image_url

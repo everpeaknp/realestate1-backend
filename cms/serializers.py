@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink, NewsletterSettings, PropertySidebarSettings
+from .models import (
+    HeaderSettings, NavigationLink, FooterSettings, FooterLink, 
+    NewsletterSettings, PropertySidebarSettings, PropertiesHeroSettings
+)
 
 
 class NavigationLinkSerializer(serializers.ModelSerializer):
@@ -84,3 +87,29 @@ class PropertySidebarSettingsSerializer(serializers.ModelSerializer):
                 'bio': obj.default_agent.bio,
             }
         return None
+
+
+class PropertiesHeroSettingsSerializer(serializers.ModelSerializer):
+    background_image = serializers.SerializerMethodField()
+    background_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = PropertiesHeroSettings
+        fields = ['id', 'title', 'subtitle', 'background_image', 'background_url', 'background_image_url', 'is_active']
+    
+    def get_background_image(self, obj):
+        if obj.background_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.background_image.url)
+            return obj.background_image.url
+        return None
+    
+    def get_background_url(self, obj):
+        """Return the actual URL to use (uploaded image or fallback URL)"""
+        if obj.background_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.background_image.url)
+            return obj.background_image.url
+        return obj.background_image_url

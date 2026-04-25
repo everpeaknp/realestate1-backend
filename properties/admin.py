@@ -1,6 +1,49 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Property, PropertyImage
+from .models import Property, PropertyImage, PropertiesHeroSettings
+
+
+@admin.register(PropertiesHeroSettings)
+class PropertiesHeroSettingsAdmin(admin.ModelAdmin):
+    """Admin for Properties Hero Settings"""
+    list_display = ['title', 'subtitle', 'is_active']
+    
+    fieldsets = (
+        ('Hero Content', {
+            'fields': ('title', 'subtitle')
+        }),
+        ('Background Image', {
+            'fields': ('background_image', 'background_image_preview', 'background_image_url'),
+            'description': 'Upload a custom background image or use the URL fallback'
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+    )
+    
+    readonly_fields = ('background_image_preview',)
+    
+    def background_image_preview(self, obj):
+        if obj.background_image:
+            return format_html(
+                '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
+                obj.background_image.url
+            )
+        elif obj.background_image_url:
+            return format_html(
+                '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" /><br><small style="color: #666;">Using fallback URL</small>',
+                obj.background_image_url
+            )
+        return format_html('<p style="color: #999;">No image</p>')
+    background_image_preview.short_description = 'Preview'
+    
+    def has_add_permission(self, request):
+        # Only allow one instance (singleton pattern)
+        return not PropertiesHeroSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the singleton instance
+        return False
 
 
 class PropertyImageInline(admin.TabularInline):

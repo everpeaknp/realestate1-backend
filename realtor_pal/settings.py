@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'contact',
     'cms',
     'home',
+    'homeworth',
 ]
 
 MIDDLEWARE = [

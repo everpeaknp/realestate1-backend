@@ -1,11 +1,14 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink, NewsletterSettings, PropertySidebarSettings
+from .models import (
+    HeaderSettings, NavigationLink, FooterSettings, FooterLink, 
+    NewsletterSettings, PropertySidebarSettings, PropertiesHeroSettings
+)
 from .serializers import (
     HeaderSettingsSerializer, NavigationLinkSerializer,
     FooterSettingsSerializer, FooterLinkSerializer, NewsletterSettingsSerializer,
-    PropertySidebarSettingsSerializer
+    PropertySidebarSettingsSerializer, PropertiesHeroSettingsSerializer
 )
 
 
@@ -66,4 +69,14 @@ class PropertySidebarSettingsViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = PropertySidebarSettings.objects.filter(is_active=True)
     serializer_class = PropertySidebarSettingsSerializer
+    permission_classes = [AllowAny]
+
+
+class PropertiesHeroSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for properties hero settings.
+    Returns the singleton properties hero settings.
+    """
+    queryset = PropertiesHeroSettings.objects.filter(is_active=True)
+    serializer_class = PropertiesHeroSettingsSerializer
     permission_classes = [AllowAny]

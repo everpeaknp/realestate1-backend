@@ -94,6 +94,7 @@ class NLTKProcessor:
             'sell_property': ['sell', 'selling', 'list my', 'listing my', 'market my', 'want to sell', 'need to sell'],
             'rent': ['rent', 'rental', 'lease', 'tenant', 'renting'],
             'mortgage': ['mortgage', 'loan', 'financing', 'bank', 'interest', 'pre-approved'],
+            'investment': ['investment', 'invest', 'portfolio', 'roi', 'return', 'yield', 'capital growth', 'passive income', 'wealth', 'investor'],
             'greeting': ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening', 'greetings'],
             'goodbye': ['bye', 'goodbye', 'see you', 'thanks', 'thank you', 'later'],
             'help': ['help', 'assist', 'support', 'question', 'faq'],

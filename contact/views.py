@@ -1,7 +1,17 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
-from .models import ContactCard, ContactFormSettings
-from .serializers import ContactCardSerializer, ContactFormSettingsSerializer
+from .models import ContactCard, ContactFormSettings, ContactHeroSettings
+from .serializers import ContactCardSerializer, ContactFormSettingsSerializer, ContactHeroSettingsSerializer
+
+
+class ContactHeroSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for contact hero settings.
+    Returns the singleton contact hero settings.
+    """
+    queryset = ContactHeroSettings.objects.filter(is_active=True)
+    serializer_class = ContactHeroSettingsSerializer
+    permission_classes = [AllowAny]
 
 
 class ContactCardViewSet(viewsets.ReadOnlyModelViewSet):

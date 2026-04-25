@@ -26,6 +26,8 @@ urlpatterns = [
     path('api/contact/', include('contact.urls')),
     path('api/cms/', include('cms.urls')),
     path('api/home/', include('home.urls')),
+    path('api/homeworth/', include('homeworth.urls')),
+    path('api/homeworth/', include('homeworth.urls')),
 
     # API documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

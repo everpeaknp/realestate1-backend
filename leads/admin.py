@@ -205,13 +205,50 @@ class LeadAdmin(admin.ModelAdmin):
     )
     list_filter = ('inquiry_type', 'source', 'status', 'created_at')
     search_fields = ('first_name', 'last_name', 'email', 'phone', 'message', 'subject')
-    readonly_fields = (
-        'created_at', 'updated_at',
-        'image_preview_1', 'image_preview_2', 'image_preview_3', 
-        'image_preview_4', 'image_preview_5', 'all_images_preview'
-    )
     date_hierarchy = 'created_at'
     list_per_page = 50
+    
+    # Custom template for change form
+    change_form_template = 'admin/leads/lead_change_form.html'
+    
+    # Make all fields readonly except status
+    def get_readonly_fields(self, request, obj=None):
+        """Make all fields readonly except status"""
+        if obj:  # Editing an existing object
+            return [
+                'first_name', 'last_name', 'email', 'phone',
+                'inquiry_type', 'location', 'subject', 'message',
+                'budget', 'property_type_interest',
+                'property_image_1', 'property_image_2', 'property_image_3',
+                'property_image_4', 'property_image_5',
+                'source', 'related_property',
+                'created_at', 'updated_at',
+                'image_preview_1', 'image_preview_2', 'image_preview_3',
+                'image_preview_4', 'image_preview_5', 'all_images_preview'
+            ]
+        return ['created_at', 'updated_at']
+    
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        """Handle status change from custom template"""
+        if request.method == 'POST' and 'status' in request.POST:
+            # Get the lead object
+            obj = self.get_object(request, object_id)
+            if obj:
+                # Update the status
+                new_status = request.POST.get('status')
+                if new_status in ['NEW', 'CONTACTED', 'QUALIFIED', 'CLOSED']:
+                    obj.status = new_status
+                    obj.save()
+                    self.message_user(
+                        request,
+                        f'Lead status updated to {obj.get_status_display()}.',
+                        'success'
+                    )
+            # Redirect back to the same page
+            from django.shortcuts import redirect
+            return redirect(request.path)
+        
+        return super().change_view(request, object_id, form_url, extra_context)
 
     fieldsets = (
         ('Personal Information', {
@@ -243,6 +280,24 @@ class LeadAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    def get_fieldsets(self, request, obj=None):
+        """
+        Dynamically show/hide Property Images section based on source.
+        Only show for VALUATION source (HomeWorthForm submissions).
+        """
+        fieldsets = super().get_fieldsets(request, obj)
+        
+        # If this is a new object (obj is None) or source is not VALUATION,
+        # remove the Property Images fieldset
+        if obj is None or obj.source != 'VALUATION':
+            # Filter out the Property Images fieldset
+            fieldsets = [
+                fs for fs in fieldsets 
+                if fs[0] != 'Property Images'
+            ]
+        
+        return fieldsets
 
     def get_urls(self):
         urls = super().get_urls()
@@ -329,7 +384,11 @@ class LeadAdmin(admin.ModelAdmin):
     property_link.short_description = 'Property'
 
     def has_images(self, obj):
-        """Show if lead has any property images"""
+        """Show if lead has any property images (only for VALUATION source)"""
+        # Only show image count for valuation requests
+        if obj.source != 'VALUATION':
+            return format_html('<span style="color:#999;">-</span>')
+        
         images = [obj.property_image_1, obj.property_image_2, obj.property_image_3, 
                   obj.property_image_4, obj.property_image_5]
         count = sum(1 for img in images if img)

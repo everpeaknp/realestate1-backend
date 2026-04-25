@@ -11,8 +11,8 @@
 .analytics-wrap{padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .analytics-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
 .analytics-header h1{font-size:22px;font-weight:700;color:#1a1a1a;margin:0;display:flex;align-items:center;gap:10px}
-.back-btn{background:#5d6d87;color:#fff;padding:8px 18px;border-radius:4px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
-.back-btn:hover{background:#4a5a72;color:#fff}
+.back-btn{background:#5d6d87;color:#fff !important;padding:8px 18px;border-radius:4px;text-decoration:none;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.back-btn:hover{background:#4a5a72;color:#fff !important}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;margin-bottom:28px}
 .kpi-card{background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:18px 16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
 .kpi-icon{display:flex;justify-content:center;margin-bottom:8px}
@@ -267,11 +267,70 @@
 ></div>
 
 <script>
-(function () {
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('=== Analytics Dashboard Initialization ===');
+  
+  // Check if Chart.js is loaded
+  if (typeof Chart === 'undefined') {
+    console.error('ERROR: Chart.js is not loaded!');
+    alert('Chart.js failed to load. Please refresh the page.');
+    return;
+  }
+  console.log('✓ Chart.js loaded');
+  
   var el = document.getElementById('chart-data');
-  var parse = function (attr) { return JSON.parse(el.getAttribute(attr)); };
+  if (!el) {
+    console.error('ERROR: chart-data element not found!');
+    return;
+  }
+  console.log('✓ chart-data element found');
+  
+  var parse = function (attr) { 
+    var val = el.getAttribute(attr);
+    if (!val) {
+      console.warn('WARNING: ' + attr + ' is empty or null');
+      return [];
+    }
+    try {
+      var parsed = JSON.parse(val);
+      console.log('✓ Parsed ' + attr + ': ' + (Array.isArray(parsed) ? parsed.length + ' items' : typeof parsed));
+      return parsed;
+    } catch (e) {
+      console.error('ERROR parsing ' + attr + ':', e);
+      return [];
+    }
+  };
+  
   var FONT = { family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", size: 12 };
   Chart.defaults.font = FONT;
+  
+  // Global tooltip configuration
+  Chart.defaults.plugins.tooltip = {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    titleColor: '#fff',
+    bodyColor: '#fff',
+    borderColor: '#c1a478',
+    borderWidth: 1,
+    padding: 12,
+    displayColors: true,
+    boxWidth: 12,
+    boxHeight: 12,
+    boxPadding: 6,
+    cornerRadius: 6,
+    titleFont: { size: 13, weight: 'bold' },
+    bodyFont: { size: 12 },
+    callbacks: {
+      label: function(context) {
+        var label = context.dataset.label || '';
+        if (label) {
+          label += ': ';
+        }
+        label += context.parsed.y !== undefined ? context.parsed.y : context.parsed;
+        label += ' leads';
+        return label;
+      }
+    }
+  };
 
   var trendLabels   = parse('data-trend-labels');
   var trendData     = parse('data-trend-data');
@@ -285,40 +344,145 @@
   var sourceColors  = parse('data-source-colors');
   var statusLabels  = parse('data-status-labels');
   var statusData    = parse('data-status-data');
-
-  new Chart(document.getElementById('trendChart'), {
-    type: 'line',
-    data: { labels: trendLabels, datasets: [{ label: 'Leads', data: trendData, borderColor: '#c1a478', backgroundColor: 'rgba(193,164,120,0.12)', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#c1a478', fill: true, tension: 0.4 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8, font: FONT }, grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: FONT }, grid: { color: '#f0f0f0' } } } }
+  
+  console.log('Data summary:', {
+    trend: trendData.length + ' days, sum=' + trendData.reduce(function(a,b){return a+b}, 0),
+    monthly: monthlyData.length + ' months, sum=' + monthlyData.reduce(function(a,b){return a+b}, 0),
+    types: typeData.length + ' types, sum=' + typeData.reduce(function(a,b){return a+b}, 0),
+    sources: sourceData.length + ' sources, sum=' + sourceData.reduce(function(a,b){return a+b}, 0),
+    statuses: statusData.length + ' statuses, sum=' + statusData.reduce(function(a,b){return a+b}, 0)
   });
 
-  new Chart(document.getElementById('monthlyChart'), {
-    type: 'bar',
-    data: { labels: monthlyLabels, datasets: [{ label: 'Leads', data: monthlyData, backgroundColor: '#5d6d87', borderRadius: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: FONT }, grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: FONT }, grid: { color: '#f0f0f0' } } } }
-  });
+  // Trend Chart
+  try {
+    var trendCanvas = document.getElementById('trendChart');
+    if (!trendCanvas) throw new Error('trendChart canvas not found');
+    new Chart(trendCanvas, {
+      type: 'line',
+      data: { labels: trendLabels, datasets: [{ label: 'Leads', data: trendData, borderColor: '#c1a478', backgroundColor: 'rgba(193,164,120,0.12)', borderWidth: 2, pointRadius: 3, pointBackgroundColor: '#c1a478', fill: true, tension: 0.4 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8, font: FONT }, grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: FONT }, grid: { color: '#f0f0f0' } } } }
+    });
+    console.log('✓ Trend chart created');
+  } catch (e) {
+    console.error('✗ Trend chart error:', e);
+  }
 
-  new Chart(document.getElementById('typeChart'), {
-    type: 'doughnut',
-    data: { labels: typeLabels, datasets: [{ data: typeData, backgroundColor: typeColors, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: FONT, padding: 10 } } }, cutout: '60%' }
-  });
+  // Monthly Chart
+  try {
+    var monthlyCanvas = document.getElementById('monthlyChart');
+    if (!monthlyCanvas) throw new Error('monthlyChart canvas not found');
+    new Chart(monthlyCanvas, {
+      type: 'bar',
+      data: { labels: monthlyLabels, datasets: [{ label: 'Leads', data: monthlyData, backgroundColor: '#5d6d87', borderRadius: 4 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: FONT }, grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1, font: FONT }, grid: { color: '#f0f0f0' } } } }
+    });
+    console.log('✓ Monthly chart created');
+  } catch (e) {
+    console.error('✗ Monthly chart error:', e);
+  }
 
-  new Chart(document.getElementById('sourceChart'), {
-    type: 'doughnut',
-    data: { labels: sourceLabels, datasets: [{ data: sourceData, backgroundColor: sourceColors, borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: FONT, padding: 10 } } }, cutout: '60%' }
-  });
+  // Type Chart
+  try {
+    var typeCanvas = document.getElementById('typeChart');
+    if (!typeCanvas) throw new Error('typeChart canvas not found');
+    new Chart(typeCanvas, {
+      type: 'doughnut',
+      data: { labels: typeLabels, datasets: [{ data: typeData, backgroundColor: typeColors, borderWidth: 2, borderColor: '#fff' }] },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { 
+          legend: { position: 'bottom', labels: { font: FONT, padding: 10 } },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                var label = context.label || '';
+                var value = context.parsed;
+                var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                var percentage = ((value / total) * 100).toFixed(1);
+                return label + ': ' + value + ' (' + percentage + '%)';
+              }
+            }
+          }
+        }, 
+        cutout: '60%' 
+      }
+    });
+    console.log('✓ Type chart created');
+  } catch (e) {
+    console.error('✗ Type chart error:', e);
+  }
 
-  new Chart(document.getElementById('statusChart'), {
-    type: 'doughnut',
-    data: { labels: statusLabels, datasets: [{ data: statusData, backgroundColor: ['#dc3545','#e6a817','#17a2b8','#28a745'], borderWidth: 2, borderColor: '#fff' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: FONT, padding: 10 } } }, cutout: '60%' }
-  });
+  // Source Chart
+  try {
+    var sourceCanvas = document.getElementById('sourceChart');
+    if (!sourceCanvas) throw new Error('sourceChart canvas not found');
+    new Chart(sourceCanvas, {
+      type: 'doughnut',
+      data: { labels: sourceLabels, datasets: [{ data: sourceData, backgroundColor: sourceColors, borderWidth: 2, borderColor: '#fff' }] },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { 
+          legend: { position: 'bottom', labels: { font: FONT, padding: 10 } },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                var label = context.label || '';
+                var value = context.parsed;
+                var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                var percentage = ((value / total) * 100).toFixed(1);
+                return label + ': ' + value + ' (' + percentage + '%)';
+              }
+            }
+          }
+        }, 
+        cutout: '60%' 
+      }
+    });
+    console.log('✓ Source chart created');
+  } catch (e) {
+    console.error('✗ Source chart error:', e);
+  }
 
+  // Status Chart
+  try {
+    var statusCanvas = document.getElementById('statusChart');
+    if (!statusCanvas) throw new Error('statusChart canvas not found');
+    new Chart(statusCanvas, {
+      type: 'doughnut',
+      data: { labels: statusLabels, datasets: [{ data: statusData, backgroundColor: ['#dc3545','#e6a817','#17a2b8','#28a745'], borderWidth: 2, borderColor: '#fff' }] },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        plugins: { 
+          legend: { position: 'bottom', labels: { font: FONT, padding: 10 } },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                var label = context.label || '';
+                var value = context.parsed;
+                var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                var percentage = ((value / total) * 100).toFixed(1);
+                return label + ': ' + value + ' (' + percentage + '%)';
+              }
+            }
+          }
+        }, 
+        cutout: '60%' 
+      }
+    });
+    console.log('✓ Status chart created');
+  } catch (e) {
+    console.error('✗ Status chart error:', e);
+  }
+
+  // Progress bars
   document.querySelectorAll('.progress-bar-fill[data-pct]').forEach(function(el) {
     el.style.width = el.getAttribute('data-pct') + '%';
   });
-}());
+  
+  console.log('=== All charts initialized successfully ===');
+});
 </script>
 {% endblock %}

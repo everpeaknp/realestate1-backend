@@ -1,8 +1,19 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Goal, ServicesProvide
-from .serializers import GoalSerializer, ServicesProvideSerializer
+from rest_framework.permissions import AllowAny
+from .models import Goal, ServicesProvide, AboutHeroSettings
+from .serializers import GoalSerializer, ServicesProvideSerializer, AboutHeroSettingsSerializer
+
+
+class AboutHeroSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for about hero settings.
+    Returns the singleton about hero settings.
+    """
+    queryset = AboutHeroSettings.objects.filter(is_active=True)
+    serializer_class = AboutHeroSettingsSerializer
+    permission_classes = [AllowAny]
 
 
 class GoalViewSet(viewsets.ReadOnlyModelViewSet):

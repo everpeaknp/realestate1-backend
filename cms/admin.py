@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import HeaderSettings, NavigationLink, FooterSettings, FooterLink, NewsletterSettings, PropertySidebarSettings
+from .models import (
+    HeaderSettings, NavigationLink, FooterSettings, FooterLink, 
+    NewsletterSettings, PropertySidebarSettings, PropertiesHeroSettings
+)
 
 
 @admin.register(HeaderSettings)
@@ -160,6 +163,32 @@ class PropertySidebarSettingsAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
         return not PropertySidebarSettings.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the singleton instance
+        return False
+
+
+@admin.register(PropertiesHeroSettings)
+class PropertiesHeroSettingsAdmin(admin.ModelAdmin):
+    list_display = ['title', 'subtitle', 'is_active']
+    
+    fieldsets = (
+        ('Hero Content', {
+            'fields': ('title', 'subtitle')
+        }),
+        ('Background Image', {
+            'fields': ('background_image', 'background_image_url'),
+            'description': 'Upload an image or provide a URL. Uploaded image takes priority.'
+        }),
+        ('Status', {
+            'fields': ('is_active',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Only allow one instance (singleton pattern)
+        return not PropertiesHeroSettings.objects.exists()
     
     def has_delete_permission(self, request, obj=None):
         # Prevent deletion of the singleton instance

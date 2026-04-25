@@ -1,9 +1,20 @@
 from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Property
-from .serializers import PropertyListSerializer, PropertyDetailSerializer
+from .models import Property, PropertiesHeroSettings
+from .serializers import PropertyListSerializer, PropertyDetailSerializer, PropertiesHeroSettingsSerializer
+
+
+class PropertiesHeroSettingsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    API endpoint for properties hero settings.
+    Returns the singleton properties hero settings.
+    """
+    queryset = PropertiesHeroSettings.objects.filter(is_active=True)
+    serializer_class = PropertiesHeroSettingsSerializer
+    permission_classes = [AllowAny]
 
 
 class PropertyViewSet(viewsets.ReadOnlyModelViewSet):

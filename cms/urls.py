@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     HeaderSettingsViewSet, NavigationLinkViewSet,
     FooterSettingsViewSet, FooterLinkViewSet, NewsletterSettingsViewSet,
-    PropertySidebarSettingsViewSet
+    PropertySidebarSettingsViewSet, PropertiesHeroSettingsViewSet
 )
 
 router = DefaultRouter()
@@ -13,6 +13,7 @@ router.register(r'footer-settings', FooterSettingsViewSet, basename='footer-sett
 router.register(r'footer-links', FooterLinkViewSet, basename='footer-links')
 router.register(r'newsletter-settings', NewsletterSettingsViewSet, basename='newsletter-settings')
 router.register(r'property-sidebar-settings', PropertySidebarSettingsViewSet, basename='property-sidebar-settings')
+router.register(r'properties-hero-settings', PropertiesHeroSettingsViewSet, basename='properties-hero-settings')
 
 urlpatterns = [
     path('', include(router.urls)),

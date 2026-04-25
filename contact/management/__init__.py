@@ -1,1 +1,1 @@
-# Management package
+# Management module for contact app
