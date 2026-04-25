@@ -220,6 +220,11 @@ class LeadAdmin(admin.ModelAdmin):
             'fields': ('budget', 'property_type_interest'),
             'classes': ('collapse',),
         }),
+        ('Property Images', {
+            'fields': ('property_image_1', 'property_image_2', 'property_image_3', 'property_image_4', 'property_image_5'),
+            'classes': ('collapse',),
+            'description': 'Images uploaded by the user for property valuation'
+        }),
         ('Metadata', {
             'fields': ('source', 'related_property', 'status')
         }),

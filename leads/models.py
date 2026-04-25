@@ -43,6 +43,13 @@ class Lead(models.Model):
     # Interest / Preferences (optional)
     budget = models.CharField(max_length=100, blank=True, help_text="e.g. $200,000 - $400,000")
     property_type_interest = models.CharField(max_length=100, blank=True, help_text="e.g. 3BHK apartment, house, land")
+    
+    # Property Images (for valuation requests)
+    property_image_1 = models.ImageField(upload_to='leads/property_images/', blank=True, null=True, help_text="Property image 1")
+    property_image_2 = models.ImageField(upload_to='leads/property_images/', blank=True, null=True, help_text="Property image 2")
+    property_image_3 = models.ImageField(upload_to='leads/property_images/', blank=True, null=True, help_text="Property image 3")
+    property_image_4 = models.ImageField(upload_to='leads/property_images/', blank=True, null=True, help_text="Property image 4")
+    property_image_5 = models.ImageField(upload_to='leads/property_images/', blank=True, null=True, help_text="Property image 5")
 
     # Metadata
     source = models.CharField(max_length=20, choices=SOURCE_CHOICES)
