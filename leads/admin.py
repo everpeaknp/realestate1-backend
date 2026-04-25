@@ -201,11 +201,15 @@ class LeadAdmin(admin.ModelAdmin):
     """Enhanced admin for Lead model with analytics dashboard."""
     list_display = (
         'full_name', 'email', 'phone', 'inquiry_type_badge',
-        'source_badge', 'status_badge', 'property_link', 'created_at'
+        'source_badge', 'status_badge', 'property_link', 'has_images', 'created_at'
     )
     list_filter = ('inquiry_type', 'source', 'status', 'created_at')
     search_fields = ('first_name', 'last_name', 'email', 'phone', 'message', 'subject')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = (
+        'created_at', 'updated_at',
+        'image_preview_1', 'image_preview_2', 'image_preview_3', 
+        'image_preview_4', 'image_preview_5', 'all_images_preview'
+    )
     date_hierarchy = 'created_at'
     list_per_page = 50
 
@@ -221,8 +225,14 @@ class LeadAdmin(admin.ModelAdmin):
             'classes': ('collapse',),
         }),
         ('Property Images', {
-            'fields': ('property_image_1', 'property_image_2', 'property_image_3', 'property_image_4', 'property_image_5'),
-            'classes': ('collapse',),
+            'fields': (
+                'all_images_preview',
+                ('property_image_1', 'image_preview_1'),
+                ('property_image_2', 'image_preview_2'),
+                ('property_image_3', 'image_preview_3'),
+                ('property_image_4', 'image_preview_4'),
+                ('property_image_5', 'image_preview_5'),
+            ),
             'description': 'Images uploaded by the user for property valuation'
         }),
         ('Metadata', {
@@ -317,6 +327,92 @@ class LeadAdmin(admin.ModelAdmin):
             )
         return format_html('<span style="color:#999;">-</span>')
     property_link.short_description = 'Property'
+
+    def has_images(self, obj):
+        """Show if lead has any property images"""
+        images = [obj.property_image_1, obj.property_image_2, obj.property_image_3, 
+                  obj.property_image_4, obj.property_image_5]
+        count = sum(1 for img in images if img)
+        if count > 0:
+            return format_html(
+                '<span style="background:#28a745;color:white;padding:3px 8px;border-radius:3px;font-size:11px;">📷 {}</span>',
+                count
+            )
+        return format_html('<span style="color:#999;">-</span>')
+    has_images.short_description = 'Images'
+
+    def all_images_preview(self, obj):
+        """Display all property images in a grid"""
+        images = [
+            (obj.property_image_1, 'Image 1'),
+            (obj.property_image_2, 'Image 2'),
+            (obj.property_image_3, 'Image 3'),
+            (obj.property_image_4, 'Image 4'),
+            (obj.property_image_5, 'Image 5'),
+        ]
+        
+        html_parts = ['<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 10px;">']
+        
+        for img, label in images:
+            if img:
+                html_parts.append(f'''
+                    <div style="border: 2px solid #ddd; border-radius: 8px; overflow: hidden; background: #f8f9fa;">
+                        <a href="{img.url}" target="_blank" style="display: block;">
+                            <img src="{img.url}" alt="{label}" 
+                                 style="width: 100%; height: 200px; object-fit: cover; display: block;" />
+                        </a>
+                        <div style="padding: 8px; text-align: center; background: #fff; border-top: 1px solid #ddd;">
+                            <strong style="font-size: 12px; color: #495057;">{label}</strong>
+                            <br>
+                            <a href="{img.url}" target="_blank" 
+                               style="font-size: 11px; color: #007bff; text-decoration: none;">
+                                View Full Size →
+                            </a>
+                        </div>
+                    </div>
+                ''')
+        
+        html_parts.append('</div>')
+        
+        if not any(img for img, _ in images):
+            return format_html('<p style="color: #999; font-style: italic;">No images uploaded</p>')
+        
+        return format_html(''.join(html_parts))
+    all_images_preview.short_description = 'All Property Images'
+
+    def image_preview_1(self, obj):
+        return self._image_preview(obj.property_image_1, 'Property Image 1')
+    image_preview_1.short_description = 'Preview'
+
+    def image_preview_2(self, obj):
+        return self._image_preview(obj.property_image_2, 'Property Image 2')
+    image_preview_2.short_description = 'Preview'
+
+    def image_preview_3(self, obj):
+        return self._image_preview(obj.property_image_3, 'Property Image 3')
+    image_preview_3.short_description = 'Preview'
+
+    def image_preview_4(self, obj):
+        return self._image_preview(obj.property_image_4, 'Property Image 4')
+    image_preview_4.short_description = 'Preview'
+
+    def image_preview_5(self, obj):
+        return self._image_preview(obj.property_image_5, 'Property Image 5')
+    image_preview_5.short_description = 'Preview'
+
+    def _image_preview(self, image_field, alt_text):
+        """Helper method to generate image preview HTML"""
+        if image_field:
+            return format_html(
+                '<a href="{}" target="_blank">'
+                '<img src="{}" alt="{}" style="max-width: 200px; max-height: 200px; '
+                'border: 2px solid #ddd; border-radius: 4px; display: block;" />'
+                '</a>',
+                image_field.url,
+                image_field.url,
+                alt_text
+            )
+        return format_html('<span style="color: #999; font-style: italic;">No image</span>')
 
     actions = ['mark_as_contacted', 'mark_as_qualified', 'mark_as_closed']
 
