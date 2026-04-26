@@ -114,44 +114,32 @@ class ChatbotViewSet(viewsets.ViewSet):
         if updated:
             session.save()
 
-            # Create a Lead with user info + extract preferences from message
+            # Create a Lead with spaCy NER-extracted preferences
             try:
                 from leads.models import Lead
+                from chatbot.nlp_engine import extractor
+                from properties.models import Property as PropModel
+
                 name_parts = user_name.split(' ', 1) if user_name else ['Chat', 'User']
-
-                # Extract preferences from the message
-                budget = ''
-                prop_type = ''
-                msg_lower = message.lower()
-
-                # Budget extraction
-                import re
-                budget_match = re.search(r'\$?([\d,]+)\s*(?:k|thousand|lakh|crore|million)?', msg_lower)
-                if budget_match:
-                    budget = f"~{budget_match.group(0).strip()}"
-
-                # Property type extraction
-                for pt in ['apartment', 'house', 'villa', 'condo', 'land', 'plot', 'flat', 'studio', 'bhk']:
-                    if pt in msg_lower:
-                        prop_type = pt.upper()
-                        break
+                known_cities = list(PropModel.objects.values_list('city', flat=True).distinct())
+                ents = extractor.extract_all(message, known_cities)
 
                 Lead.objects.get_or_create(
                     email=user_email or f'{session_id}@chat.local',
                     defaults={
-                        'first_name':            name_parts[0],
-                        'last_name':             name_parts[1] if len(name_parts) > 1 else '',
-                        'phone':                 user_phone,
-                        'inquiry_type':          'GENERAL',
-                        'source':                'CHATBOT',
-                        'message':               f'Chat session started. First message: {message[:200]}',
-                        'subject':               'Chat Inquiry',
-                        'budget':                budget,
-                        'property_type_interest': prop_type,
+                        'first_name':             name_parts[0],
+                        'last_name':              name_parts[1] if len(name_parts) > 1 else '',
+                        'phone':                  user_phone,
+                        'inquiry_type':           'GENERAL',
+                        'source':                 'CHATBOT',
+                        'message':                f'Chat session started. First message: {message[:200]}',
+                        'subject':                'Chat Inquiry',
+                        'budget':                 f"~${ents['budget']:,}" if ents['budget'] else '',
+                        'property_type_interest': ents['property_type'] or '',
+                        'location':               ents['city'] or '',
                     }
                 )
             except Exception:
-                # Don't fail the chat if lead creation fails
                 pass
         
         # Process message with chatbot engine

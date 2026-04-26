@@ -1,122 +1,203 @@
 """
-Chatbot Engine — trained on live database data.
-Uses [icon] markers that the frontend renders as Lucide icons.
+Chatbot Engine v2 — Modern Local NLP Stack
+==========================================
+Priority chain (first match wins):
+  0. Chatbot Rules        — admin-managed exact/regex patterns
+  1. Property Name Match  — direct title/slug lookup
+  2. Knowledge Base       — semantic vector search (sentence-transformers)
+  3. FAQ                  — semantic vector search (sentence-transformers)
+  4. Intent Handlers      — spaCy NER + NLTK intent detection
+
+100% local — no external API calls.
 """
-from .nltk_processor import NLTKProcessor
-from .models import KnowledgeBase, ChatbotRule
-from properties.models import Property
-from agents.models import Agent
-from faqs.models import FAQ
+
+from __future__ import annotations
+
 import random
 import re
 
+from .models import ChatbotRule, KnowledgeBase
+from .nlp_engine import extractor, searcher
+from properties.models import Property
+from faqs.models import FAQ
+
 
 class ChatbotEngine:
-    """Main chatbot engine that processes messages and generates responses"""
+    """Main chatbot engine — orchestrates the NLP pipeline."""
 
     def __init__(self):
-        self.nlp = NLTKProcessor()
+        # Keep NLTK processor as intent fallback
+        try:
+            from .nltk_processor import NLTKProcessor
+            self.nlp = NLTKProcessor()
+        except Exception:
+            self.nlp = None
 
-    def process_message(self, message, session_id=None):
-        intent, confidence = self.nlp.detect_intent(message)
-        entities = self.nlp.extract_entities(message)
-        sentiment = self.nlp.analyze_sentiment(message)
+    # ---------------------------------------------------------------- #
+    #  Public entry point                                               #
+    # ---------------------------------------------------------------- #
 
-        # 0. Rule-based responses — ABSOLUTE HIGHEST PRIORITY
+    def process_message(self, message: str, session_id: str | None = None) -> dict:
+        intent, confidence = self._detect_intent(message)
+        sentiment = self._analyze_sentiment(message)
+
+        # 0. Rule-based — ABSOLUTE HIGHEST PRIORITY
         rule_response = self._match_rule(message)
         if rule_response:
-            return {
-                'response': rule_response,
-                'intent': 'rule_match',
-                'confidence': 1.0,
-                'sentiment': sentiment,
-            }
+            return self._result(rule_response, "rule_match", 1.0, sentiment)
 
-        # 1. Check for specific property name match BEFORE general matching
-        # This prevents FAQs from intercepting property detail requests
-        property_response = self._check_property_match(message)
-        if property_response:
-            return {
-                'response': property_response,
-                'intent': 'property_details',
-                'confidence': 0.98,
-                'sentiment': sentiment,
-            }
+        # 1. Specific property name match
+        prop_response = self._check_property_match(message)
+        if prop_response:
+            return self._result(prop_response, "property_details", 0.98, sentiment)
 
-        # 2. Knowledge Base — admin-managed custom Q&A
-        kb_response = self._match_knowledge_base(message)
+        # 2. Knowledge Base — semantic search
+        kb_response = searcher.search_kb(message)
         if kb_response:
-            return {
-                'response': kb_response,
-                'intent': 'knowledge_base',
-                'confidence': 0.95,
-                'sentiment': sentiment,
-            }
+            return self._result(kb_response, "knowledge_base", 0.95, sentiment)
 
-        # 3. FAQ matching
-        faq_response = self._match_faq(message)
+        # 3. FAQ — semantic search
+        faq_response = searcher.search_faq(message)
         if faq_response:
-            return {
-                'response': faq_response,
-                'intent': 'faq_match',
-                'confidence': 0.9,
-                'sentiment': sentiment,
-            }
+            return self._result(faq_response, "faq_match", 0.90, sentiment)
 
-        # 4. Intent-based handlers
-        response = self._generate_response(intent, message, entities, sentiment)
+        # 4. Intent handlers with spaCy NER
+        response = self._generate_response(intent, message, sentiment)
+        return self._result(response, intent, confidence, sentiment)
+
+    # ---------------------------------------------------------------- #
+    #  Helpers                                                          #
+    # ---------------------------------------------------------------- #
+
+    @staticmethod
+    def _result(response, intent, confidence, sentiment):
         return {
-            'response': response,
-            'intent': intent,
-            'confidence': confidence,
-            'sentiment': sentiment,
+            "response":   response,
+            "intent":     intent,
+            "confidence": confidence,
+            "sentiment":  sentiment,
         }
 
-    def _match_rule(self, message):
-        """
-        Check all active rules in priority order.
-        First matching rule wins — returns immediately.
-        """
+    def _detect_intent(self, message: str) -> tuple[str, float]:
+        if self.nlp:
+            try:
+                return self.nlp.detect_intent(message)
+            except Exception:
+                pass
+        return self._regex_intent(message), 0.6
+
+    def _analyze_sentiment(self, message: str) -> dict:
+        if self.nlp:
+            try:
+                return self.nlp.analyze_sentiment(message)
+            except Exception:
+                pass
+        return {"compound": 0.0}
+
+    def _regex_intent(self, message: str) -> str:
+        msg = message.lower()
+        if any(w in msg for w in ["hi", "hello", "hey", "good morning", "good afternoon"]):
+            return "greeting"
+        if any(w in msg for w in ["bye", "goodbye", "thanks", "thank you"]):
+            return "goodbye"
+        if any(w in msg for w in ["buy", "purchase", "for sale", "looking for", "find", "search", "show"]):
+            return "property_search"
+        if any(w in msg for w in ["price", "cost", "budget", "afford", "how much"]):
+            return "pricing"
+        if any(w in msg for w in ["rent", "rental", "lease"]):
+            return "rent"
+        if any(w in msg for w in ["sell", "selling", "list my"]):
+            return "sell_property"
+        if any(w in msg for w in ["mortgage", "loan", "finance", "home loan"]):
+            return "mortgage"
+        if any(w in msg for w in ["invest", "portfolio", "yield", "return"]):
+            return "investment"
+        if any(w in msg for w in ["contact", "agent", "call", "email", "phone"]):
+            return "contact"
+        if any(w in msg for w in ["view", "visit", "tour", "schedule", "appointment"]):
+            return "schedule_viewing"
+        if any(w in msg for w in ["where", "location", "city", "area", "suburb"]):
+            return "location"
+        if any(w in msg for w in ["help", "what can", "how do", "faq"]):
+            return "help"
+        return "general"
+
+    def _known_cities(self) -> list[str]:
+        return list(Property.objects.values_list("city", flat=True).distinct())
+
+    # ---------------------------------------------------------------- #
+    #  Rule matching                                                    #
+    # ---------------------------------------------------------------- #
+
+    def _match_rule(self, message: str) -> str | None:
         try:
-            rules = ChatbotRule.objects.filter(is_active=True).order_by('-priority', 'name')
-            for rule in rules:
+            for rule in ChatbotRule.objects.filter(is_active=True).order_by("-priority", "name"):
                 if rule.matches(message):
                     return rule.response
         except Exception:
             pass
         return None
 
-    def _check_property_match(self, message):
-        """
-        Check if message contains a specific property name.
-        This runs BEFORE FAQs to prevent FAQ false positives on property queries.
-        Returns formatted property details if match found, else None.
-        """
+    # ---------------------------------------------------------------- #
+    #  Property name match                                              #
+    # ---------------------------------------------------------------- #
+
+    def _check_property_match(self, message: str) -> str | None:
         try:
             msg_lower = message.lower()
-            
-            # Keywords that indicate property detail request
-            detail_keywords = ['detail', 'about', 'tell me', 'show me', 'info', 'information']
-            has_detail_keyword = any(kw in msg_lower for kw in detail_keywords)
-            
-            # Check all available properties
-            for prop in Property.objects.filter(status='AVAILABLE'):
-                # Check if property title or slug is in the message
-                if prop.title.lower() in msg_lower or prop.slug.replace('-', ' ') in msg_lower:
-                    # If it's a detail request or just the property name, show details
-                    if has_detail_keyword or len(msg_lower.split()) <= 5:
+            detail_kw = ["detail", "about", "tell me", "show me", "info", "information"]
+            has_detail = any(kw in msg_lower for kw in detail_kw)
+            for prop in Property.objects.filter(status="AVAILABLE"):
+                if prop.title.lower() in msg_lower or prop.slug.replace("-", " ") in msg_lower:
+                    if has_detail or len(msg_lower.split()) <= 5:
                         return self._format_property_details(prop)
-            
         except Exception:
             pass
-        
         return None
 
-    def _format_property_details(self, prop):
-        """Format detailed property information"""
-        ptype = 'For Sale' if prop.property_type == 'FOR_SALE' else 'For Rent'
-        amenities = ', '.join(prop.amenities_list[:5]) if prop.amenities_list else 'N/A'
-        
+    # ---------------------------------------------------------------- #
+    #  Intent dispatch                                                  #
+    # ---------------------------------------------------------------- #
+
+    def _generate_response(self, intent: str, message: str, sentiment: dict) -> str:
+        handlers = {
+            "greeting":         self._handle_greeting,
+            "goodbye":          self._handle_goodbye,
+            "property_search":  self._handle_property_search,
+            "property_details": self._handle_property_details,
+            "pricing":          self._handle_pricing,
+            "location":         self._handle_location,
+            "schedule_viewing": self._handle_schedule_viewing,
+            "contact":          self._handle_contact,
+            "sell_property":    self._handle_sell_property,
+            "rent":             self._handle_rent,
+            "mortgage":         self._handle_mortgage,
+            "investment":       self._handle_investment,
+            "help":             self._handle_help,
+            "general":          self._handle_general,
+        }
+        return handlers.get(intent, self._handle_general)(message, sentiment)
+
+    # ---------------------------------------------------------------- #
+    #  Formatters                                                       #
+    # ---------------------------------------------------------------- #
+
+    def _format_property(self, prop, include_link=True) -> str:
+        ptype = "For Sale" if prop.property_type == "FOR_SALE" else "For Rent"
+        lines = [
+            f"PROPERTY: {prop.title}",
+            f"Price: ${prop.price:,.0f} ({ptype})",
+            f"Details: {prop.beds} bed | {prop.baths} bath | {prop.sqft:,} sqft",
+            f"Location: {prop.city}, {prop.state}",
+        ]
+        if include_link:
+            lines.append(f"View Property: /properties/{prop.slug}")
+        lines.append("")
+        return "\n".join(lines)
+
+    def _format_property_details(self, prop) -> str:
+        ptype = "For Sale" if prop.property_type == "FOR_SALE" else "For Rent"
+        amenities = ", ".join(prop.amenities_list[:5]) if prop.amenities_list else "N/A"
         lines = [
             f"PROPERTY: {prop.title}",
             f"Price: ${prop.price:,.0f} ({ptype})",
@@ -128,228 +209,51 @@ class ChatbotEngine:
             lines.append(f"Year Built: {prop.year_built}")
         lines.append(f"Features: {amenities}")
         lines.append(f"\nView Property: /properties/{prop.slug}")
-        
         return "\n".join(lines)
 
-    def _match_knowledge_base(self, message):
-        """
-        Match message against admin-managed Knowledge Base entries.
-        Checked before FAQs — highest priority source of truth.
-        """
-        try:
-            entries = KnowledgeBase.objects.filter(is_active=True).order_by('-priority', 'question')
-            if not entries.exists():
-                return None
+    # ---------------------------------------------------------------- #
+    #  Intent handlers — now use spaCy NER via extractor               #
+    # ---------------------------------------------------------------- #
 
-            msg_lower = message.lower().strip()
-            msg_words = set(re.findall(r'\b\w+\b', msg_lower))
-
-            best_entry = None
-            best_score = 0
-
-            for entry in entries:
-                keywords = entry.keyword_list
-                if not keywords:
-                    continue
-
-                # Count how many keywords match
-                matched_count = sum(
-                    1 for kw in keywords
-                    if kw in msg_lower or any(kw in w for w in msg_words)
-                )
-
-                # Skip if less than 2 keywords matched (avoid single-word false positives)
-                if matched_count < 2:
-                    continue
-
-                # Normalise by keyword count, boost by priority
-                score = (matched_count / len(keywords)) + (entry.priority * 0.05)
-
-                if score > best_score:
-                    best_score = score
-                    best_entry = entry
-
-            # Require at least 50% keyword match AND minimum 2 keywords
-            if best_entry and best_score >= 0.50:
-                return best_entry.answer
-
-        except Exception:
-            pass
-
-        return None
-
-    def _match_faq(self, message):
-        """
-        Match the user message against all active FAQs.
-        Returns the FAQ answer if a strong match is found, else None.
-        """
-        try:
-            faqs = FAQ.objects.filter(is_active=True)
-            if not faqs.exists():
-                return None
-
-            msg_lower = message.lower().strip()
-            msg_words = set(re.findall(r'\b\w+\b', msg_lower))
-
-            # Stop words to ignore when scoring
-            stop = {
-                'i', 'a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been',
-                'do', 'does', 'did', 'have', 'has', 'had', 'will', 'would', 'could',
-                'should', 'may', 'might', 'can', 'to', 'of', 'in', 'for', 'on',
-                'with', 'at', 'by', 'from', 'up', 'about', 'into', 'through',
-                'what', 'how', 'why', 'when', 'where', 'who', 'which', 'that',
-                'this', 'it', 'me', 'my', 'we', 'our', 'you', 'your', 'need',
-                'get', 'much', 'long', 'take', 'between', 'difference',
-            }
-
-            best_faq = None
-            best_score = 0
-
-            for faq in faqs:
-                q_lower = faq.question.lower()
-                q_words = set(re.findall(r'\b\w+\b', q_lower)) - stop
-                msg_sig = msg_words - stop
-
-                if not q_words or not msg_sig:
-                    continue
-
-                # Keyword overlap score
-                overlap = q_words & msg_sig
-                score = len(overlap) / max(len(q_words), len(msg_sig))
-
-                # Bonus: exact substring match
-                for word in msg_sig:
-                    if len(word) > 4 and word in q_lower:
-                        score += 0.15
-
-                if score > best_score:
-                    best_score = score
-                    best_faq = faq
-
-            # Threshold: require meaningful overlap
-            if best_faq and best_score >= 0.25:
-                return (
-                    f"FAQ: {best_faq.question}\n\n"
-                    f"{best_faq.answer}\n\n"
-                    f"Category: {best_faq.category}\n\n"
-                    "Do you have another question? I'm happy to help."
-                )
-        except Exception:
-            pass
-
-        return None
-
-    def _generate_response(self, intent, message, entities, sentiment):
-        handlers = {
-            'greeting':         self._handle_greeting,
-            'goodbye':          self._handle_goodbye,
-            'property_search':  self._handle_property_search,
-            'property_details': self._handle_property_details,
-            'pricing':          self._handle_pricing,
-            'location':         self._handle_location,
-            'schedule_viewing': self._handle_schedule_viewing,
-            'contact':          self._handle_contact,
-            'sell_property':    self._handle_sell_property,
-            'rent':             self._handle_rent,
-            'mortgage':         self._handle_mortgage,
-            'investment':       self._handle_investment,
-            'help':             self._handle_help,
-            'general':          self._handle_general,
-        }
-        return handlers.get(intent, self._handle_general)(message, entities, sentiment)
-
-    # ------------------------------------------------------------------ #
-    #  Helpers                                                             #
-    # ------------------------------------------------------------------ #
-
-    def _format_property(self, prop, include_link=True):
-        """Format a property card using clean professional text formatting"""
-        ptype = 'For Sale' if prop.property_type == 'FOR_SALE' else 'For Rent'
-        lines = [
-            f"PROPERTY: {prop.title}",
-            f"Price: ${prop.price:,.0f} ({ptype})",
-            f"Details: {prop.beds} bed | {prop.baths} bath | {prop.sqft:,} sqft",
-            f"Location: {prop.city}, {prop.state}",
-        ]
-        if include_link:
-            lines.append(f"View Property: /properties/{prop.slug}")
-        lines.append("")  # Add spacing between properties
-        return "\n".join(lines)
-
-    def _extract_budget(self, message):
-        patterns = [
-            (r'\$?([\d,]+)k', 1000),
-            (r'\$?([\d,]+),000', 1000),
-            (r'\$?([\d]{4,})', 1),
-        ]
-        for pat, multiplier in patterns:
-            m = re.search(pat, message.lower())
-            if m:
-                val = int(m.group(1).replace(',', '')) * multiplier
-                return val
-        return None
-
-    def _extract_beds(self, message):
-        m = re.search(r'(\d+)\s*(?:bed|bedroom|br)', message.lower())
-        return int(m.group(1)) if m else None
-
-    def _extract_city(self, message):
-        cities = list(Property.objects.values_list('city', flat=True).distinct())
-        msg_lower = message.lower()
-        for city in cities:
-            if city.lower() in msg_lower:
-                return city
-        return None
-
-    # ------------------------------------------------------------------ #
-    #  Intent handlers                                                     #
-    # ------------------------------------------------------------------ #
-
-    def _handle_greeting(self, message, entities, sentiment):
+    def _handle_greeting(self, message, sentiment):
         return random.choice([
             "Hello! I'm here to help you with your property needs. I represent Bijen Khadka, an experienced Investment Property Specialist with 12+ years of experience and 1500+ satisfied clients. How can I assist you today?",
             "Hi there! Welcome to Lily White Real Estate. Whether you're looking to buy, sell, rent, or need investment guidance, I'm here to help. What brings you here today?",
             "Welcome! I'm your property assistant representing Bijen Khadka. With expertise across 24 locations and $85+ million saved for clients, we're here to help you find the perfect solution. What are you looking for?",
         ])
 
-    def _handle_goodbye(self, message, entities, sentiment):
+    def _handle_goodbye(self, message, sentiment):
         return random.choice([
             "Thanks for chatting! Feel free to come back anytime. Good luck with your property search!",
             "Goodbye! We're here whenever you need help with your real estate journey.",
             "Have a great day! Don't hesitate to reach out if you have more questions.",
         ])
 
-    def _handle_property_search(self, message, entities, sentiment):
-        qs = Property.objects.filter(status='AVAILABLE')
+    def _handle_property_search(self, message, sentiment):
+        cities = self._known_cities()
+        ents = extractor.extract_all(message, cities)
+
+        qs = Property.objects.filter(status="AVAILABLE")
         msg_lower = message.lower()
 
-        if any(w in msg_lower for w in ['rent', 'rental', 'lease']):
-            qs = qs.filter(property_type='FOR_RENT')
-        elif any(w in msg_lower for w in ['buy', 'purchase', 'sale', 'for sale']):
-            qs = qs.filter(property_type='FOR_SALE')
+        if any(w in msg_lower for w in ["rent", "rental", "lease"]):
+            qs = qs.filter(property_type="FOR_RENT")
+        elif any(w in msg_lower for w in ["buy", "purchase", "sale", "for sale"]):
+            qs = qs.filter(property_type="FOR_SALE")
 
-        beds = self._extract_beds(message)
-        if beds:
-            qs = qs.filter(beds__gte=beds)
-
-        city = self._extract_city(message)
-        if city:
-            qs = qs.filter(city__iexact=city)
-
-        budget = self._extract_budget(message)
-        if budget:
-            qs = qs.filter(price__lte=budget)
+        if ents["beds"]:
+            qs = qs.filter(beds__gte=ents["beds"])
+        if ents["city"]:
+            qs = qs.filter(city__iexact=ents["city"])
+        if ents["budget"]:
+            qs = qs.filter(price__lte=ents["budget"])
 
         results = qs[:4]
-
         if results.exists():
             filters = []
-            if city:
-                filters.append(f"in {city}")
-            if beds:
-                filters.append(f"{beds}+ bedrooms")
-            if budget:
-                filters.append(f"under ${budget:,}")
+            if ents["city"]:   filters.append(f"in {ents['city']}")
+            if ents["beds"]:   filters.append(f"{ents['beds']}+ bedrooms")
+            if ents["budget"]: filters.append(f"under ${ents['budget']:,}")
             filter_str = f" ({', '.join(filters)})" if filters else ""
             response = f"Here are some properties{filter_str}:\n\n"
             for prop in results:
@@ -357,41 +261,37 @@ class ChatbotEngine:
             response += "Would you like more details on any of these? Just ask!"
             return response
 
-        total = Property.objects.filter(status='AVAILABLE').count()
+        total = Property.objects.filter(status="AVAILABLE").count()
         return (
             f"No properties matched those exact criteria, but we have {total} available listings overall.\n\n"
             "Try a different city, budget, or bedroom count, or say 'show all properties'."
         )
 
-    def _handle_property_details(self, message, entities, sentiment):
-        # This handler is now primarily handled by _check_property_match()
-        # But keep as fallback for intent-based routing
+    def _handle_property_details(self, message, sentiment):
         msg_lower = message.lower()
-        for prop in Property.objects.filter(status='AVAILABLE'):
-            if prop.title.lower() in msg_lower or prop.slug.replace('-', ' ') in msg_lower:
+        for prop in Property.objects.filter(status="AVAILABLE"):
+            if prop.title.lower() in msg_lower or prop.slug.replace("-", " ") in msg_lower:
                 return self._format_property_details(prop)
-
         return (
             "I'd be happy to give you details on any property!\n\n"
             "Try: 'tell me about Beachfront Paradise' or 'show me the Victorian house'."
         )
 
-    def _handle_pricing(self, message, entities, sentiment):
-        budget = self._extract_budget(message)
+    def _handle_pricing(self, message, sentiment):
+        budget = extractor.extract_budget(message)
         if budget:
-            qs = Property.objects.filter(status='AVAILABLE', price__lte=budget).order_by('price')[:4]
+            qs = Property.objects.filter(status="AVAILABLE", price__lte=budget).order_by("price")[:4]
             if qs.exists():
                 response = f"Properties within your ${budget:,} budget:\n\n"
                 for prop in qs:
                     response += self._format_property(prop) + "\n\n"
                 return response
-            min_price = Property.objects.filter(status='AVAILABLE').order_by('price').values_list('price', flat=True).first()
+            min_price = Property.objects.filter(status="AVAILABLE").order_by("price").values_list("price", flat=True).first()
             return (
                 f"No properties found under ${budget:,}.\n\n"
                 f"Our most affordable listing starts at ${min_price:,.0f}. Would you like to see it?"
             )
-
-        props = Property.objects.filter(status='AVAILABLE').order_by('price')
+        props = Property.objects.filter(status="AVAILABLE").order_by("price")
         if props.exists():
             return (
                 f"PRICE RANGE\n\n"
@@ -400,20 +300,17 @@ class ChatbotEngine:
             )
         return "Tell me your budget and I'll find properties that fit!"
 
-    def _handle_location(self, message, entities, sentiment):
-        city = self._extract_city(message)
+    def _handle_location(self, message, sentiment):
+        city = extractor.extract_city(message, self._known_cities())
         if city:
-            props = Property.objects.filter(status='AVAILABLE', city__iexact=city)[:4]
+            props = Property.objects.filter(status="AVAILABLE", city__iexact=city)[:4]
             if props.exists():
                 response = f"Properties available in {city}:\n\n"
                 for prop in props:
                     response += self._format_property(prop) + "\n\n"
                 return response
             return f"No available properties in {city} right now. Would you like to see nearby areas?"
-
-        cities = sorted(set(
-            Property.objects.filter(status='AVAILABLE').values_list('city', flat=True).distinct()
-        ))
+        cities = sorted(set(self._known_cities()))
         if cities:
             return (
                 f"AVAILABLE LOCATIONS\n\n"
@@ -422,7 +319,7 @@ class ChatbotEngine:
             )
         return "Tell me which city or neighborhood you're interested in!"
 
-    def _handle_schedule_viewing(self, message, entities, sentiment):
+    def _handle_schedule_viewing(self, message, sentiment):
         return (
             "SCHEDULE A VIEWING\n\n"
             "I'd be happy to arrange a property viewing for you.\n\n"
@@ -433,7 +330,7 @@ class ChatbotEngine:
             "We'll work around your schedule and arrange a convenient time. Looking forward to showing you the property!"
         )
 
-    def _handle_contact(self, message, entities, sentiment):
+    def _handle_contact(self, message, sentiment):
         return (
             "CONTACT INFORMATION\n\n"
             "Agent: Bijen Khadka - Investment Property Specialist\n"
@@ -447,7 +344,7 @@ class ChatbotEngine:
             "Feel free to reach out anytime. We're here to help you achieve your property goals!"
         )
 
-    def _handle_sell_property(self, message, entities, sentiment):
+    def _handle_sell_property(self, message, sentiment):
         return (
             "SELLING YOUR PROPERTY\n\n"
             "Thinking of selling? You're in good hands! With 12+ years of experience and $85M+ saved for clients, here's how we can help:\n\n"
@@ -461,14 +358,12 @@ class ChatbotEngine:
             "Email: Bijen@lilywhiterealestate.com.au"
         )
 
-    def _handle_rent(self, message, entities, sentiment):
-        qs = Property.objects.filter(status='AVAILABLE', property_type='FOR_RENT')
-        beds = self._extract_beds(message)
-        if beds:
-            qs = qs.filter(beds__gte=beds)
-        budget = self._extract_budget(message)
-        if budget:
-            qs = qs.filter(price__lte=budget)
+    def _handle_rent(self, message, sentiment):
+        cities = self._known_cities()
+        ents = extractor.extract_all(message, cities)
+        qs = Property.objects.filter(status="AVAILABLE", property_type="FOR_RENT")
+        if ents["beds"]:   qs = qs.filter(beds__gte=ents["beds"])
+        if ents["budget"]: qs = qs.filter(price__lte=ents["budget"])
         results = qs[:4]
         if results.exists():
             response = "Here are our available rental properties:\n\n"
@@ -480,7 +375,7 @@ class ChatbotEngine:
             "Tell me your preferred location, budget, or bedroom count and I'll find the right rental for you!"
         )
 
-    def _handle_mortgage(self, message, entities, sentiment):
+    def _handle_mortgage(self, message, sentiment):
         return (
             "HOME LOAN ASSISTANCE\n\n"
             "Home loans can be complex, but we're here to guide you through it!\n\n"
@@ -495,7 +390,7 @@ class ChatbotEngine:
             "Email: Bijen@lilywhiterealestate.com.au"
         )
 
-    def _handle_investment(self, message, entities, sentiment):
+    def _handle_investment(self, message, sentiment):
         return (
             "INVESTMENT PROPERTY GUIDANCE\n\n"
             "Building a property investment portfolio? You're in the right place!\n\n"
@@ -511,15 +406,13 @@ class ChatbotEngine:
             "Email: Bijen@lilywhiterealestate.com.au"
         )
 
-    def _handle_help(self, message, entities, sentiment):
+    def _handle_help(self, message, sentiment):
         try:
-            faqs = FAQ.objects.filter(is_active=True).order_by('order')
+            faqs = FAQ.objects.filter(is_active=True).order_by("order")
             if faqs.exists():
-                # Group by category
                 categories: dict = {}
                 for faq in faqs:
                     categories.setdefault(faq.category, []).append(faq)
-
                 response = "FREQUENTLY ASKED QUESTIONS\n\n"
                 for category, items in categories.items():
                     response += f"{category.upper()}\n"
@@ -531,31 +424,29 @@ class ChatbotEngine:
         except Exception:
             pass
         return (
-            "HOW I CAN HELP\n\n"
-            "I can assist you with:\n\n"
-            "- Finding properties for sale or rent\n"
-            "- Budget and pricing questions\n"
-            "- Properties by location\n"
-            "- Scheduling viewings\n"
-            "- Connecting with our agents\n"
-            "- Selling your property\n"
-            "- Mortgage and financing\n\n"
-            "What would you like to know?"
+            "[help-circle] Here is how I can help you:\n\n"
+            "[home] Show me 3 bedroom homes - property search\n"
+            "[map-pin] Properties in Los Angeles - search by city\n"
+            "[dollar-sign] Under 300000 - search by budget\n"
+            "[info] Tell me about a property - property details\n"
+            "[calendar] Schedule a viewing - book a tour\n"
+            "[user] Contact an agent - get agent info\n"
+            "[tag] What are your services - learn about us\n"
+            "[help-circle] FAQs - common questions\n\n"
+            "What would you like to do?"
         )
 
-    def _handle_general(self, message, entities, sentiment):
+    def _handle_general(self, message, sentiment):
         msg_lower = message.lower()
-        if any(w in msg_lower for w in ['all properties', 'all listings', 'everything', 'show me all']):
-            return self._handle_property_search(message, entities, sentiment)
-
-        if sentiment.get('compound', 0) < -0.5:
+        if any(w in msg_lower for w in ["all properties", "all listings", "everything", "show me all"]):
+            return self._handle_property_search(message, sentiment)
+        if sentiment.get("compound", 0) < -0.5:
             return (
                 "I understand your concern. Let me help you find the right solution. "
                 "Could you tell me more about what you're looking for? "
                 "With our experience and expertise, we'll work to find the perfect property for you."
             )
-
-        total = Property.objects.filter(status='AVAILABLE').count()
+        total = Property.objects.filter(status="AVAILABLE").count()
         return (
             f"HOW I CAN HELP\n\n"
             f"I'm here to assist you with all your property needs! We currently have {total} available properties.\n\n"

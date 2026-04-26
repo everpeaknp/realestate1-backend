@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.urls import path
+from django.shortcuts import render, get_object_or_404
 from .models import ChatSession, ChatMessage, KnowledgeBase, ChatbotRule
 
 
@@ -9,48 +11,98 @@ from .models import ChatSession, ChatMessage, KnowledgeBase, ChatbotRule
 
 @admin.register(ChatSession)
 class ChatSessionAdmin(admin.ModelAdmin):
-    list_display = ['session_label', 'user_name', 'user_email', 'user_phone', 'created_at', 'message_count']
+    list_display = ['session_label', 'user_name', 'user_email', 'user_phone', 'created_at', 'message_count', 'view_chat_link']
     search_fields = ['session_id', 'user_name', 'user_email', 'user_phone']
     readonly_fields = ['session_id', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
 
     fieldsets = (
         ('Session', {'fields': ('session_id',)}),
-        ('User Info (Optional)', {'fields': ('user_name', 'user_email', 'user_phone')}),
+        ('User Info', {'fields': ('user_name', 'user_email', 'user_phone')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path('<int:session_id>/chat/', self.admin_site.admin_view(self.chat_view), name='chatbot_chatsession_chat'),
+        ]
+        return custom + urls
+
+    def chat_view(self, request, session_id):
+        session = get_object_or_404(ChatSession, pk=session_id)
+        messages = session.messages.order_by('created_at')
+        context = {
+            'session': session,
+            'messages': messages,
+            'title': f'Chat — {session.user_name or session.user_email or session.session_id[:12]}',
+            'opts': ChatSession._meta,
+            'app_label': 'chatbot',
+            'available_apps': admin.site.get_app_list(request),
+        }
+        return render(request, 'admin/chatbot/chat_view.html', context)
+
     def session_label(self, obj):
-        return obj.user_name or obj.user_email or obj.session_id[:12] + '...'
-    session_label.short_description = 'Session'
+        name = obj.user_name or obj.user_email or obj.session_id[:12] + '...'
+        return format_html('<strong>{}</strong>', name)
+    session_label.short_description = 'User'
 
     def message_count(self, obj):
-        return obj.messages.count()
+        count = obj.messages.count()
+        return format_html('<span style="background:#17a2b8;color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{} msgs</span>', count)
     message_count.short_description = 'Messages'
+
+    def view_chat_link(self, obj):
+        return format_html(
+            '<a href="{}/chat/" style="background:#c1a478;color:white;padding:3px 10px;border-radius:3px;font-size:11px;text-decoration:none;">View Chat</a>',
+            obj.pk
+        )
+    view_chat_link.short_description = 'Chat'
 
 
 @admin.register(ChatMessage)
 class ChatMessageAdmin(admin.ModelAdmin):
-    list_display = ['user_info', 'intent', 'confidence', 'created_at', 'message_preview']
-    list_filter = ['intent', 'created_at']
+    list_display = ['user_info', 'message_preview', 'response_preview', 'intent', 'created_at', 'view_session_link']
+    list_filter = ['intent', 'created_at', 'session__user_name']
     search_fields = ['message', 'response', 'session__session_id', 'session__user_name', 'session__user_email']
-    readonly_fields = ['created_at', 'user_info_display']
+    readonly_fields = ['created_at', 'user_info_display', 'full_conversation']
 
     def user_info(self, obj):
         s = obj.session
-        if s.user_name or s.user_email:
-            return format_html(
-                '<div style="font-size:11px;line-height:1.4;">'
-                '<strong>{}</strong><br>'
-                '<span style="color:#6c757d;">{}</span><br>'
-                '<span style="color:#6c757d;">{}</span>'
-                '</div>',
-                s.user_name or 'Anonymous',
-                s.user_email or '-',
-                s.user_phone or '-',
-            )
-        return format_html('<span style="color:#999;">Anonymous</span>')
+        name = s.user_name or s.user_email or 'Anonymous'
+        color = '#c1a478' if s.user_name else '#6c757d'
+        return format_html(
+            '<div style="font-size:12px;">'
+            '<strong style="color:{};">{}</strong>'
+            '{}'
+            '</div>',
+            color, name,
+            format_html('<br><span style="color:#aaa;font-size:11px;">{}</span>', s.user_email) if s.user_email else ''
+        )
     user_info.short_description = 'User'
+
+    def message_preview(self, obj):
+        text = obj.message[:60] + '...' if len(obj.message) > 60 else obj.message
+        return format_html(
+            '<div style="background:#f0f4f8;padding:4px 8px;border-radius:4px;font-size:12px;max-width:200px;">{}</div>',
+            text
+        )
+    message_preview.short_description = 'User Message'
+
+    def response_preview(self, obj):
+        text = obj.response[:60] + '...' if len(obj.response) > 60 else obj.response
+        return format_html(
+            '<div style="background:#fff8f0;padding:4px 8px;border-radius:4px;font-size:12px;max-width:200px;border-left:3px solid #c1a478;">{}</div>',
+            text
+        )
+    response_preview.short_description = 'Bot Response'
+
+    def view_session_link(self, obj):
+        return format_html(
+            '<a href="/admin/chatbot/chatsession/{}/chat/" style="background:#5d6d87;color:white;padding:3px 10px;border-radius:3px;font-size:11px;text-decoration:none;">View Chat</a>',
+            obj.session.pk
+        )
+    view_session_link.short_description = 'Chat'
 
     def user_info_display(self, obj):
         s = obj.session
@@ -59,23 +111,31 @@ class ChatMessageAdmin(admin.ModelAdmin):
             '<p style="margin:0;"><strong>Email:</strong> {}</p>'
             '<p style="margin:0;"><strong>Phone:</strong> {}</p>'
             '<p style="margin:0;"><strong>Session ID:</strong> <code>{}</code></p>',
-            s.user_name or '-',
-            s.user_email or '-',
-            s.user_phone or '-',
-            s.session_id,
+            s.user_name or '-', s.user_email or '-', s.user_phone or '-', s.session_id,
         )
     user_info_display.short_description = 'User Information'
 
-    def message_preview(self, obj):
-        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
-    message_preview.short_description = 'Message'
+    def full_conversation(self, obj):
+        messages = obj.session.messages.order_by('created_at')
+        html = ['<div style="border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;max-height:400px;overflow-y:auto;">']
+        for m in messages:
+            is_current = m.pk == obj.pk
+            border = '3px solid #c1a478' if is_current else 'none'
+            html.append(f'''
+                <div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;border-left:{border};">
+                    <div style="font-size:11px;color:#aaa;margin-bottom:4px;">{m.created_at.strftime("%b %d, %H:%M")}</div>
+                    <div style="background:#f0f4f8;padding:6px 10px;border-radius:6px;font-size:12px;margin-bottom:6px;"><strong>User:</strong> {m.message}</div>
+                    <div style="background:#fff8f0;padding:6px 10px;border-radius:6px;font-size:12px;border-left:3px solid #c1a478;"><strong>Bot:</strong> {m.response[:200]}{"..." if len(m.response) > 200 else ""}</div>
+                </div>
+            ''')
+        html.append('</div>')
+        return format_html(''.join(html))
+    full_conversation.short_description = 'Full Conversation'
 
     fieldsets = (
         ('User Info', {'fields': ('user_info_display',)}),
-        ('Session', {'fields': ('session',)}),
-        ('Message', {'fields': ('message', 'response')}),
-        ('Analysis', {'fields': ('intent', 'confidence')}),
-        ('Metadata', {'fields': ('created_at',)}),
+        ('This Exchange', {'fields': ('message', 'response', 'intent', 'confidence', 'created_at')}),
+        ('Full Conversation', {'fields': ('full_conversation',)}),
     )
 
 
