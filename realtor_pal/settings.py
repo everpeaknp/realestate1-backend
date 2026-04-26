@@ -128,7 +128,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 # REST Framework settings
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'realtor_pal.pagination.DynamicPageNumberPagination',
     'PAGE_SIZE': 12,
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
@@ -173,10 +173,15 @@ JAZZMIN_SETTINGS = {
     
     "show_sidebar": True,
     "navigation_expanded": True,
-    "hide_apps": [],
-    "hide_models": [],
+    "hide_apps": ["services"],
+    "hide_models": [
+        "properties.PropertiesHeroSettings",
+        "properties.PropertyImage",
+        "home.InstagramImage",
+    ],
     "order_with_respect_to": [
         "properties",
+        "properties.Property",
         "leads",
         "blog",
         "testimonials",
@@ -237,6 +242,20 @@ JAZZMIN_SETTINGS = {
                 "permissions": ["leads.view_lead"],
             }
         ],
+        "properties": [
+            {
+                "name": "Property Images",
+                "url": "/admin/properties/propertyimage/",
+                "icon": "fas fa-images",
+                "permissions": ["properties.view_propertyimage"],
+            },
+            {
+                "name": "Hero Settings",
+                "url": "/admin/properties/propertiesherosettings/",
+                "icon": "fas fa-sliders-h",
+                "permissions": ["properties.view_propertiesherosettings"],
+            },
+        ],
     },
     
     "default_icon_parents": "fas fa-chevron-circle-right",
@@ -271,8 +290,8 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar": "sidebar-dark-olive",
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": False,
-    "sidebar_nav_compact_style": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": True,
     "sidebar_nav_legacy_style": False,
     "sidebar_nav_flat_style": False,
     "theme": "flatly",

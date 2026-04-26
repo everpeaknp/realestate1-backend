@@ -23,7 +23,7 @@ class PropertiesHeroSettings(models.Model):
     
     class Meta:
         verbose_name = 'Hero Settings'
-        verbose_name_plural = '⚙️ Hero Settings'
+        verbose_name_plural = 'Hero Settings'
     
     def __str__(self):
         return "Properties Hero Settings"
@@ -107,7 +107,7 @@ class Property(models.Model):
     
     class Meta:
         verbose_name = 'Property'
-        verbose_name_plural = "🏠 Properties"
+        verbose_name_plural = "Properties"
         ordering = ['-created_at']
     
     def __str__(self):
@@ -136,7 +136,7 @@ class PropertyImage(models.Model):
     
     class Meta:
         verbose_name = 'Property Image'
-        verbose_name_plural = '📷 Property Images'
+        verbose_name_plural = 'Property Images'
         ordering = ['order']
     
     def __str__(self):

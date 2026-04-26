@@ -1,8 +1,8 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.db.models import F
+from django.db.models import F, Q
 from .models import BlogPost, Comment, BlogHeroSettings
 from .serializers import (
     BlogPostListSerializer,
@@ -35,6 +35,10 @@ class BlogPostViewSet(viewsets.ModelViewSet):
     
     queryset = BlogPost.objects.filter(is_published=True)
     lookup_field = 'slug'
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'excerpt', 'content', 'author_name', 'category__name']
+    ordering_fields = ['published_at', 'views', 'title']
+    ordering = ['-published_at']
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
