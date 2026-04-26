@@ -99,7 +99,7 @@ class Property(models.Model):
     is_featured = models.BooleanField(default=False)
     
     # Relationships
-    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, related_name='properties')
+    agent = models.ForeignKey(Agent, on_delete=models.SET_NULL, null=True, blank=True, related_name='properties')
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
