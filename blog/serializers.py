@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import BlogPost, Comment, BlogGalleryImage, BlogHeroSettings
+from .models import BlogPost, Comment, BlogHeroSettings
 
 
 class BlogHeroSettingsSerializer(serializers.ModelSerializer):
@@ -26,24 +26,6 @@ class BlogHeroSettingsSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.background_image.url)
             return obj.background_image.url
         return obj.background_image_url
-
-
-class BlogGalleryImageSerializer(serializers.ModelSerializer):
-    """Serializer for blog gallery images"""
-    
-    image = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = BlogGalleryImage
-        fields = ['id', 'image', 'caption', 'order']
-    
-    def get_image(self, obj):
-        if obj.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
-        return None
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -106,7 +88,6 @@ class BlogPostDetailSerializer(serializers.ModelSerializer):
     
     comments_count = serializers.IntegerField(read_only=True)
     comments = CommentSerializer(many=True, read_only=True)
-    gallery_images = BlogGalleryImageSerializer(many=True, read_only=True)
     featured_image = serializers.SerializerMethodField()
     author_avatar = serializers.SerializerMethodField()
     
@@ -115,7 +96,7 @@ class BlogPostDetailSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'slug', 'title', 'excerpt', 'content', 'featured_image',
             'author_name', 'author_avatar', 'category', 'tags',
-            'views', 'comments_count', 'comments', 'gallery_images',
+            'views', 'comments_count', 'comments',
             'published_at', 'updated_at'
         ]
         read_only_fields = ['id', 'slug', 'views', 'comments_count', 'published_at', 'updated_at']

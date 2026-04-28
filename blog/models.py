@@ -170,44 +170,6 @@ class BlogPost(models.Model):
         return self.comments.filter(status='APPROVED').count()
 
 
-class BlogGalleryImage(models.Model):
-    """Media library for blog images"""
-    
-    post = models.ForeignKey(BlogPost, on_delete=models.CASCADE, related_name='gallery_images', null=True, blank=True)
-    image = models.ImageField(upload_to='blog/gallery/', help_text="Upload image")
-    caption = models.CharField(max_length=200, blank=True, help_text="Optional image caption")
-    alt_text = models.CharField(max_length=200, blank=True, help_text="Alt text for accessibility")
-    order = models.PositiveIntegerField(default=0, help_text="Display order")
-    
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-created_at']
-        verbose_name = 'Media'
-        verbose_name_plural = 'Media'
-    
-    def __str__(self):
-        if self.post:
-            return f"Media for {self.post.title}"
-        return f"Media - {self.image.name}"
-    
-    @property
-    def file_size(self):
-        """Get file size in KB"""
-        try:
-            return f"{self.image.size / 1024:.1f} KB"
-        except:
-            return "N/A"
-    
-    @property
-    def file_name(self):
-        """Get file name"""
-        try:
-            return self.image.name.split('/')[-1]
-        except:
-            return "N/A"
-
-
 class Comment(models.Model):
     """Comment model for blog posts"""
     
