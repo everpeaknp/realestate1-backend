@@ -21,4 +21,7 @@ pip install --prefer-binary -r requirements.txt
 echo "Installing spaCy English model..."
 python -m spacy download en_core_web_sm
 
+echo "Collecting static files..."
+python manage.py collectstatic --noinput
+
 echo "Build script completed successfully!"
