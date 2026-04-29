@@ -8,7 +8,7 @@ python -m pip install --upgrade pip setuptools wheel
 echo "Installing heavy ML dependencies as binary wheels..."
 # Force only-binary for these packages to avoid expensive and failure-prone compilation on Render
 python -m pip install --only-binary :all: \
-    "numpy>=1.19.0,<2.0.0" \
+    "numpy>=1.19.0" \
     "blis>=0.7.8,<0.8.0" \
     "thinc>=8.2.2,<8.3.0" \
     "spacy==3.7.4" \
