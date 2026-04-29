@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -10,9 +10,17 @@ ENV PIP_ONLY_BINARY=":all:"
 
 WORKDIR /app
 
-# Install system dependencies (libpq-dev for psycopg2-binary, gcc as fallback only)
+# Install system dependencies
+# libpq-dev for psycopg2-binary
+# libjpeg-dev, zlib1g-dev, etc. for Pillow
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
+    libjpeg-dev \
+    zlib1g-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

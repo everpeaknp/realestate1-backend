@@ -5,6 +5,9 @@ services:
     runtime: docker
     plan: free
     healthCheckPath: /admin/login/
+    # If switching to runtime: python, use the following build command:
+    # buildCommand: ./build.sh
+    # startCommand: ./start.sh
     envVars:
       - key: DATABASE_URL
         fromDatabase:
