@@ -1,5 +1,5 @@
-# Use official Python 3.12 slim image
-FROM python:3.12-slim
+# Use official Python 3.11 slim image (3.11 often has better wheel support for ML)
+FROM python:3.11-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -10,6 +10,7 @@ ENV PORT 8000
 WORKDIR /app
 
 # Install system dependencies
+# We keep build-essential and gcc just in case, but aim to avoid using them
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -19,8 +20,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir --prefer-binary -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install heavy ML libraries first using only-binary to avoid compilation
+RUN pip install --no-cache-dir --only-binary :all: numpy spacy thinc blis sentence-transformers
+
+# Install the rest of the requirements
+RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
 
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
