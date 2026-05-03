@@ -58,8 +58,10 @@ COPY requirements.txt /app/
 # psycopg2-binary has a wheel so this should be fine.
 RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# Download spaCy model (small English model for NER)
-RUN python -m spacy download en_core_web_sm
+# Install spaCy model (small English model for NER) via pinned wheel.
+# Using a direct wheel URL avoids intermittent failures in `spacy download`.
+RUN pip install --no-cache-dir \
+    https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
 
 # Pre-download SentenceTransformer model to bake it into the image (avoids runtime latency)
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
