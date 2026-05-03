@@ -1,10 +1,11 @@
-name: Backend CI
+name: Backend CI & Deploy
 
 on:
   push:
     branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master, develop ]
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -29,3 +30,42 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+  deploy:
+    name: Deploy VPS
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy stack on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+
+            # Serialize deploys even if multiple workflows fire close together.
+            flock /tmp/realestate1-deploy.lock bash -c '
+              cd /opt/stacks/realestate1/frontend
+              git fetch origin main
+              git checkout main
+              git reset --hard origin/main
+              git clean -fd
+
+              cd /opt/stacks/realestate1/backend
+              git fetch origin main
+              git checkout main
+              git reset --hard origin/main
+              git clean -fd
+
+              cd /opt/stacks/realestate1
+              docker compose up -d --build realestate1-frontend realestate1-backend
+
+              docker compose ps
+              curl -fsS http://127.0.0.1:8000/api/blog/posts/ >/dev/null
+              curl -fsS http://127.0.0.1:3000/ >/dev/null
+            '
