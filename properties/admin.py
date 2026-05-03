@@ -72,11 +72,6 @@ class PropertyFeatureInline(admin.TabularInline):
     fields = ('category', 'name', 'icon', 'order')
     verbose_name = 'Feature'
     verbose_name_plural = 'Features & Amenities'
-    
-    class Media:
-        css = {
-            'all': ('admin/css/property_features.css',)
-        }
 
 
 @admin.register(Property)
