@@ -150,6 +150,11 @@ class PropertyAdmin(admin.ModelAdmin):
     price_display.short_description = 'Price'
     price_display.admin_order_field = 'price'
     
+    def location_display(self, obj):
+        return f"{obj.city}, {obj.state}"
+    location_display.short_description = 'Location'
+    location_display.admin_order_field = 'city'
+    
     def is_featured_icon(self, obj):
         if obj.is_featured:
             return format_html('<span style="color: #ffc107; font-size: 18px;">★</span>')
