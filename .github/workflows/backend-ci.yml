@@ -66,6 +66,39 @@ jobs:
               docker compose up -d --build realestate1-frontend realestate1-backend
 
               docker compose ps
-              curl -fsS http://127.0.0.1:8000/api/blog/posts/ >/dev/null
-              curl -fsS http://127.0.0.1:3000/ >/dev/null
+              
+              wait_for_url() {
+                local url="$1"
+                local name="$2"
+                local max_attempts=30
+                local delay_seconds=3
+                local attempt=1
+
+                while [ "$attempt" -le "$max_attempts" ]; do
+                  if curl -fsS "$url" >/dev/null; then
+                    echo "$name is ready: $url"
+                    return 0
+                  fi
+                  echo "Waiting for $name ($attempt/$max_attempts): $url"
+                  sleep "$delay_seconds"
+                  attempt=$((attempt + 1))
+                done
+
+                echo "$name did not become ready in time: $url"
+                return 1
+              }
+
+              if ! wait_for_url http://127.0.0.1:8000/api/blog/posts/ backend; then
+                docker compose ps
+                docker logs --tail=120 realestate1-backend || true
+                docker logs --tail=120 realestate1-frontend || true
+                exit 1
+              fi
+
+              if ! wait_for_url http://127.0.0.1:3000/ frontend; then
+                docker compose ps
+                docker logs --tail=120 realestate1-backend || true
+                docker logs --tail=120 realestate1-frontend || true
+                exit 1
+              fi
             '
