@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Property, PropertyImage, PropertiesHeroSettings
+from .models import Property, PropertyImage, PropertyFeature, PropertiesHeroSettings
 
 
 @admin.register(PropertiesHeroSettings)
@@ -47,17 +47,36 @@ class PropertiesHeroSettingsAdmin(admin.ModelAdmin):
 
 
 class PropertyImageInline(admin.TabularInline):
-    """Inline admin for property images"""
+    """Inline admin for property gallery images"""
     model = PropertyImage
-    extra = 1
+    extra = 3
     fields = ('image', 'caption', 'order', 'image_preview')
     readonly_fields = ('image_preview',)
+    verbose_name = 'Gallery Image'
+    verbose_name_plural = 'Gallery Images'
     
     def image_preview(self, obj):
         if obj.image:
-            return format_html('<img src="{}" style="max-height: 100px; max-width: 150px; border-radius: 4px;" />', obj.image.url)
-        return "No image"
+            return format_html(
+                '<img src="{}" style="max-height: 80px; max-width: 120px; border-radius: 4px; object-fit: cover;" />',
+                obj.image.url
+            )
+        return format_html('<span style="color: #999;">No image</span>')
     image_preview.short_description = 'Preview'
+
+
+class PropertyFeatureInline(admin.TabularInline):
+    """Inline admin for property features"""
+    model = PropertyFeature
+    extra = 5
+    fields = ('category', 'name', 'icon', 'order')
+    verbose_name = 'Feature'
+    verbose_name_plural = 'Features & Amenities'
+    
+    class Media:
+        css = {
+            'all': ('admin/css/property_features.css',)
+        }
 
 
 @admin.register(Property)
@@ -71,7 +90,7 @@ class PropertyAdmin(admin.ModelAdmin):
     list_filter = ('property_type', 'status', 'is_featured', 'city', 'state', 'created_at')
     search_fields = ('title', 'address', 'city', 'state', 'zip_code', 'description')
     prepopulated_fields = {'slug': ('title',)}
-    readonly_fields = ('created_at', 'updated_at', 'main_image_preview')
+    readonly_fields = ('created_at', 'updated_at', 'main_image_preview', 'floor_plan_preview')
     date_hierarchy = 'created_at'
     list_per_page = 25
     
@@ -86,11 +105,13 @@ class PropertyAdmin(admin.ModelAdmin):
             'fields': ('price', 'beds', 'baths', 'garage', 'sqft', 'year_built', 'lot_size')
         }),
         ('Images', {
-            'fields': ('main_image', 'main_image_preview', 'floor_plan')
+            'fields': ('main_image', 'main_image_preview', 'floor_plan', 'floor_plan_preview'),
+            'description': 'Upload main property image and floor plan. Gallery images can be added below.'
         }),
         ('Additional Information', {
             'fields': ('amenities', 'agent'),
-            'classes': ('collapse',)
+            'classes': ('collapse',),
+            'description': 'Legacy amenities field (comma-separated). Use Features section below for structured features.'
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -98,7 +119,7 @@ class PropertyAdmin(admin.ModelAdmin):
         }),
     )
     
-    inlines = [PropertyImageInline]
+    inlines = [PropertyImageInline, PropertyFeatureInline]
     
     def property_type_badge(self, obj):
         colors = {
@@ -143,9 +164,21 @@ class PropertyAdmin(admin.ModelAdmin):
     
     def main_image_preview(self, obj):
         if obj.main_image:
-            return format_html('<img src="{}" style="max-height: 200px; max-width: 300px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />', obj.main_image.url)
+            return format_html(
+                '<img src="{}" style="max-height: 200px; max-width: 300px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />',
+                obj.main_image.url
+            )
         return format_html('<p style="color: #999;">No image uploaded</p>')
     main_image_preview.short_description = 'Main Image Preview'
+    
+    def floor_plan_preview(self, obj):
+        if obj.floor_plan:
+            return format_html(
+                '<img src="{}" style="max-height: 200px; max-width: 300px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />',
+                obj.floor_plan.url
+            )
+        return format_html('<p style="color: #999;">No floor plan uploaded</p>')
+    floor_plan_preview.short_description = 'Floor Plan Preview'
     
     actions = ['mark_as_featured', 'remove_featured', 'mark_as_available', 'mark_as_sold', 'mark_as_rented']
     
@@ -188,3 +221,18 @@ class PropertyImageAdmin(admin.ModelAdmin):
             return format_html('<img src="{}" style="max-height: 100px; max-width: 150px; border-radius: 4px;" />', obj.image.url)
         return "No image"
     image_preview.short_description = 'Preview'
+
+
+@admin.register(PropertyFeature)
+class PropertyFeatureAdmin(admin.ModelAdmin):
+    """Admin for property features"""
+    list_display = ('property', 'category', 'name', 'icon', 'order')
+    list_filter = ('category', 'property')
+    search_fields = ('property__title', 'name')
+    list_editable = ('order',)
+    
+    fieldsets = (
+        (None, {
+            'fields': ('property', 'category', 'name', 'icon', 'order')
+        }),
+    )

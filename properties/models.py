@@ -141,3 +141,34 @@ class PropertyImage(models.Model):
     
     def __str__(self):
         return f"{self.property.title} - Image {self.order}"
+
+
+class PropertyFeature(models.Model):
+    """Property features/amenities"""
+    
+    FEATURE_CATEGORIES = [
+        ('INTERIOR', 'Interior Features'),
+        ('EXTERIOR', 'Exterior Features'),
+        ('APPLIANCES', 'Appliances'),
+        ('UTILITIES', 'Utilities'),
+        ('COMMUNITY', 'Community Features'),
+        ('OTHER', 'Other'),
+    ]
+    
+    property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='features')
+    category = models.CharField(max_length=20, choices=FEATURE_CATEGORIES, default='OTHER')
+    name = models.CharField(max_length=100, help_text="Feature name (e.g., 'Hardwood Floors', 'Central AC')")
+    icon = models.CharField(
+        max_length=50, 
+        blank=True,
+        help_text="Optional icon name (e.g., 'home', 'car', 'tree')"
+    )
+    order = models.IntegerField(default=0)
+    
+    class Meta:
+        verbose_name = 'Property Feature'
+        verbose_name_plural = 'Property Features'
+        ordering = ['category', 'order', 'name']
+    
+    def __str__(self):
+        return f"{self.property.title} - {self.name}"

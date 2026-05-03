@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Property, PropertyImage, PropertiesHeroSettings
+from .models import Property, PropertyImage, PropertyFeature, PropertiesHeroSettings
 
 
 class PropertiesHeroSettingsSerializer(serializers.ModelSerializer):
@@ -44,6 +44,15 @@ class PropertyImageSerializer(serializers.ModelSerializer):
         return obj.image.url
 
 
+class PropertyFeatureSerializer(serializers.ModelSerializer):
+    """Serializer for property features"""
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    
+    class Meta:
+        model = PropertyFeature
+        fields = ['id', 'category', 'category_display', 'name', 'icon', 'order']
+
+
 class PropertyListSerializer(serializers.ModelSerializer):
     """Serializer for property list view"""
     location = serializers.SerializerMethodField()
@@ -74,6 +83,8 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
     location = serializers.SerializerMethodField()
     amenities_list = serializers.ReadOnlyField()
     images = PropertyImageSerializer(many=True, read_only=True)
+    features = PropertyFeatureSerializer(many=True, read_only=True)
+    features_by_category = serializers.SerializerMethodField()
     agent_name = serializers.CharField(source='agent.name', read_only=True)
     agent_email = serializers.EmailField(source='agent.email', read_only=True)
     agent_phone = serializers.CharField(source='agent.phone', read_only=True)
@@ -89,9 +100,10 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'zip_code', 'location', 'latitude', 'longitude', 'price',
             'property_type', 'status', 'beds', 'baths', 'garage', 'sqft',
             'year_built', 'lot_size', 'main_image', 'main_image_url',
-            'floor_plan', 'floor_plan_url', 'amenities_list', 'is_featured',
-            'images', 'agent_name', 'agent_email', 'agent_phone',
-            'agent_avatar', 'agent_bio', 'created_at', 'updated_at'
+            'floor_plan', 'floor_plan_url', 'amenities_list', 'features',
+            'features_by_category', 'is_featured', 'images', 'agent_name',
+            'agent_email', 'agent_phone', 'agent_avatar', 'agent_bio',
+            'created_at', 'updated_at'
         ]
 
     def get_location(self, obj):
@@ -102,6 +114,21 @@ class PropertyDetailSerializer(serializers.ModelSerializer):
             'zip_code': obj.zip_code,
             'display': obj.location_display
         }
+    
+    def get_features_by_category(self, obj):
+        """Group features by category for easier frontend rendering"""
+        features_dict = {}
+        for feature in obj.features.all():
+            category = feature.get_category_display()
+            if category not in features_dict:
+                features_dict[category] = []
+            features_dict[category].append({
+                'id': feature.id,
+                'name': feature.name,
+                'icon': feature.icon,
+                'order': feature.order
+            })
+        return features_dict
 
     def get_main_image_url(self, obj):
         if not obj.main_image:
