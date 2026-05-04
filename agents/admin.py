@@ -21,7 +21,7 @@ class AgentAdmin(admin.ModelAdmin):
             'fields': ('name', 'email', 'phone', 'is_active')
         }),
         ('Profile', {
-            'fields': ('avatar', 'avatar_preview', 'bio', 'specialties')
+            'fields': ('avatar_image', 'avatar', 'avatar_preview', 'bio', 'specialties')
         }),
         ('Social Media', {
             'fields': ('facebook', 'twitter', 'instagram', 'linkedin'),
@@ -34,10 +34,11 @@ class AgentAdmin(admin.ModelAdmin):
     )
     
     def avatar_preview(self, obj):
-        if obj.avatar:
+        url = obj.avatar_image.url if obj.avatar_image else obj.avatar
+        if url:
             return format_html(
                 '<img src="{}" style="max-height: 150px; max-width: 150px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
-                obj.avatar
+                url
             )
         return format_html('<p style="color: #999;">No avatar</p>')
     avatar_preview.short_description = 'Avatar Preview'
