@@ -4,12 +4,22 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from leads.urls import newsletter_urlpatterns
+from properties.eagle_proxy import (
+    eagle_properties_proxy,
+    eagle_property_detail_proxy,
+    eagle_test_auth_proxy,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
     # CKEditor upload URLs (required for RichTextUploadingField)
     path('ckeditor/', include('ckeditor_uploader.urls')),
+
+    # Eagle API proxy routes (must come before other API routes)
+    path('api/eagle/properties/', eagle_properties_proxy, name='eagle-properties-proxy'),
+    path('api/eagle/properties/<str:property_id>/', eagle_property_detail_proxy, name='eagle-property-detail-proxy'),
+    path('api/eagle/test-auth/', eagle_test_auth_proxy, name='eagle-test-auth-proxy'),
 
     # API endpoints
     path('api/properties/', include('properties.urls')),
