@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.shortcuts import redirect
+from django.urls import reverse
 from .models import ContactCard, ContactFormSettings, ContactHeroSettings
 
 
@@ -36,6 +38,14 @@ class ContactHeroSettingsAdmin(admin.ModelAdmin):
         return "No image"
     image_preview.short_description = 'Background Preview'
     
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = ContactHeroSettings.objects.first()
+        if obj:
+            url = reverse('admin:contact_contactherosettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+    
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
         return not ContactHeroSettings.objects.exists()
@@ -48,7 +58,6 @@ class ContactHeroSettingsAdmin(admin.ModelAdmin):
 @admin.register(ContactCard)
 class ContactCardAdmin(admin.ModelAdmin):
     list_display = ['title', 'value', 'icon', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active', 'icon']
     search_fields = ['title', 'value']
     ordering = ['order', 'id']
@@ -104,6 +113,14 @@ class ContactFormSettingsAdmin(admin.ModelAdmin):
             )
         return "No image uploaded"
     image_preview.short_description = 'Image Preview'
+    
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = ContactFormSettings.objects.first()
+        if obj:
+            url = reverse('admin:contact_contactformsettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
     
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)

@@ -22,7 +22,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 
 # Application definition
 INSTALLED_APPS = [
-    'jazzmin',  # Must be before django.contrib.admin
+    'jazzmin',  # Professional admin theme
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -59,7 +59,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',  # WhiteNoise
-    'realtor_pal.middleware.MediaFilesMiddleware',  # Serve media files in production
+    # 'realtor_pal.middleware.MediaFilesMiddleware',  # TEMPORARILY DISABLED - May interfere with context
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,9 +93,9 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
-            'builtins': [
-                'realtor_pal.templatetags.jazzmin_compat',
-            ],
+            # 'builtins': [
+            #     'realtor_pal.templatetags.jazzmin_compat',  # DISABLED - Causing context issues
+            # ],
         },
     },
 ]

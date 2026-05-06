@@ -11,6 +11,7 @@ __pycache__
 .db.sqlite3
 db.sqlite3
 media
+scripts
 staticfiles
 Dockerfile
 .dockerignore

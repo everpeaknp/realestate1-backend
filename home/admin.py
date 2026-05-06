@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import reverse
 from .models import (
     HeroSettings, HeroCard, HowItWorksStep, Neighborhood,
     Benefit, BenefitGalleryImage, BenefitsSection,
@@ -27,6 +29,14 @@ class HeroSettingsAdmin(admin.ModelAdmin):
         }),
     )
 
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = HeroSettings.objects.first()
+        if obj:
+            url = reverse('admin:home_herosettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+
     def has_add_permission(self, request):
         return not HeroSettings.objects.exists()
 
@@ -44,7 +54,6 @@ class HeroCardInline(admin.TabularInline):
 @admin.register(HeroCard)
 class HeroCardAdmin(admin.ModelAdmin):
     list_display = ['title', 'icon_name', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active']
     search_fields = ['title', 'description']
     ordering = ['order', 'id']
@@ -53,7 +62,6 @@ class HeroCardAdmin(admin.ModelAdmin):
 @admin.register(HowItWorksStep)
 class HowItWorksStepAdmin(admin.ModelAdmin):
     list_display = ['number', 'title', 'icon_name', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active']
     search_fields = ['title', 'description']
     ordering = ['order', 'number']
@@ -62,7 +70,6 @@ class HowItWorksStepAdmin(admin.ModelAdmin):
 @admin.register(Neighborhood)
 class NeighborhoodAdmin(admin.ModelAdmin):
     list_display = ['name', 'order', 'is_active', 'created_at']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name']
     ordering = ['order', 'id']
@@ -98,6 +105,14 @@ class BenefitsSectionAdmin(admin.ModelAdmin):
     )
     inlines = [BenefitInline, BenefitGalleryImageInline]
 
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = BenefitsSection.objects.first()
+        if obj:
+            url = reverse('admin:home_benefitssection_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+
     def has_add_permission(self, request):
         return not BenefitsSection.objects.exists()
 
@@ -126,6 +141,14 @@ class ContactSectionSettingsAdmin(admin.ModelAdmin):
         }),
     )
 
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = ContactSectionSettings.objects.first()
+        if obj:
+            url = reverse('admin:home_contactsectionsettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+
     def has_add_permission(self, request):
         return not ContactSectionSettings.objects.exists()
 
@@ -136,7 +159,6 @@ class ContactSectionSettingsAdmin(admin.ModelAdmin):
 @admin.register(InstagramImage)
 class InstagramImageAdmin(admin.ModelAdmin):
     list_display = ['id', 'link', 'alt_text', 'order', 'is_active', 'created_at']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active']
     search_fields = ['alt_text', 'link']
     ordering = ['order', 'id']
@@ -163,6 +185,14 @@ class PersonSectionSettingsAdmin(admin.ModelAdmin):
         }),
     )
 
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = PersonSectionSettings.objects.first()
+        if obj:
+            url = reverse('admin:home_personsectionsettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+
     def has_add_permission(self, request):
         return not PersonSectionSettings.objects.exists()
 
@@ -173,7 +203,6 @@ class PersonSectionSettingsAdmin(admin.ModelAdmin):
 @admin.register(StatItem)
 class StatItemAdmin(admin.ModelAdmin):
     list_display = ['label', 'icon_name', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active']
     search_fields = ['label', 'description']
     ordering = ['order', 'id']

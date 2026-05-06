@@ -380,14 +380,14 @@ class LeadAdmin(admin.ModelAdmin):
                 prop.id,
                 prop.title[:30] + '...' if len(prop.title) > 30 else prop.title
             )
-        return format_html('<span style="color:#999;">-</span>')
+        return format_html('<span style="color:#999;">{}</span>', '-')
     property_link.short_description = 'Property'
 
     def has_images(self, obj):
         """Show if lead has any property images (only for VALUATION source)"""
         # Only show image count for valuation requests
         if obj.source != 'VALUATION':
-            return format_html('<span style="color:#999;">-</span>')
+            return format_html('<span style="color:#999;">{}</span>', '-')
         
         images = [obj.property_image_1, obj.property_image_2, obj.property_image_3, 
                   obj.property_image_4, obj.property_image_5]
@@ -397,7 +397,7 @@ class LeadAdmin(admin.ModelAdmin):
                 '<span style="background:#28a745;color:white;padding:3px 8px;border-radius:3px;font-size:11px;">📷 {}</span>',
                 count
             )
-        return format_html('<span style="color:#999;">-</span>')
+        return format_html('<span style="color:#999;">{}</span>', '-')
     has_images.short_description = 'Images'
 
     def all_images_preview(self, obj):
@@ -434,9 +434,10 @@ class LeadAdmin(admin.ModelAdmin):
         html_parts.append('</div>')
         
         if not any(img for img, _ in images):
-            return format_html('<p style="color: #999; font-style: italic;">No images uploaded</p>')
+            return format_html('<p style="color: #999; font-style: italic;">{}</p>', 'No images uploaded')
         
-        return format_html(''.join(html_parts))
+        # Django 6.0 requires explicit format string with placeholders
+        return format_html('{}', ''.join(html_parts))
     all_images_preview.short_description = 'All Property Images'
 
     def image_preview_1(self, obj):
@@ -471,7 +472,7 @@ class LeadAdmin(admin.ModelAdmin):
                 image_field.url,
                 alt_text
             )
-        return format_html('<span style="color: #999; font-style: italic;">No image</span>')
+        return format_html('<span style="color: #999; font-style: italic;">{}</span>', 'No image')
 
     actions = ['mark_as_contacted', 'mark_as_qualified', 'mark_as_closed']
 

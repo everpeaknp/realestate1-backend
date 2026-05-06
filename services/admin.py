@@ -21,7 +21,6 @@ class ServiceAdmin(admin.ModelAdmin):
     search_fields = ('title', 'slug', 'description')
     prepopulated_fields = {'slug': ('title',)}
     readonly_fields = ('image_preview', 'created_at', 'updated_at')
-    list_editable = ('order', 'is_active')
     inlines = [ServiceFeatureInline]
     
     fieldsets = (
@@ -56,8 +55,8 @@ class ServiceAdmin(admin.ModelAdmin):
     
     def is_active_icon(self, obj):
         if obj.is_active:
-            return format_html('<span style="color: #28a745; font-size: 18px;">✓</span>')
-        return format_html('<span style="color: #dc3545; font-size: 18px;">✗</span>')
+            return format_html('<span style="color: #28a745; font-size: 18px;">{}</span>', '✓')
+        return format_html('<span style="color: #dc3545; font-size: 18px;">{}</span>', '✗')
     is_active_icon.short_description = 'Active'
     is_active_icon.admin_order_field = 'is_active'
     

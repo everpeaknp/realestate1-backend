@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.shortcuts import redirect
+from django.urls import reverse
 from .models import Testimonial, TestimonialsHeroSettings
 
 
@@ -33,8 +35,16 @@ class TestimonialsHeroSettingsAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
                 url
             )
-        return format_html('<p style="color: #999;">No background image</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No background image')
     background_preview.short_description = 'Background Preview'
+    
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = TestimonialsHeroSettings.objects.first()
+        if obj:
+            url = reverse('admin:testimonials_testimonialsherosettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
     
     def has_add_permission(self, request):
         # Only allow one instance (singleton)
@@ -57,7 +67,6 @@ class TestimonialAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', 'updated_at', 'image_preview_large')
     date_hierarchy = 'created_at'
     list_per_page = 50
-    list_editable = ('order', 'is_approved', 'is_featured')
     
     fieldsets = (
         ('Basic Information', {
@@ -88,7 +97,7 @@ class TestimonialAdmin(admin.ModelAdmin):
                 '<img src="{}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);" />',
                 obj.image.url
             )
-        return format_html('<span style="color: #999;">No image</span>')
+        return format_html('<span style="color: #999;">{}</span>', 'No image')
     image_preview.short_description = 'Image'
     
     def image_preview_large(self, obj):
@@ -97,7 +106,7 @@ class TestimonialAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-width: 300px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
                 obj.image.url
             )
-        return format_html('<p style="color: #999;">No image uploaded</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No image uploaded')
     image_preview_large.short_description = 'Image Preview'
     
     def rating_display(self, obj):
@@ -108,22 +117,22 @@ class TestimonialAdmin(admin.ModelAdmin):
     
     def is_approved_icon(self, obj):
         if obj.is_approved:
-            return format_html('<span style="color: #28a745; font-size: 18px;">✓</span>')
-        return format_html('<span style="color: #dc3545; font-size: 18px;">✗</span>')
+            return format_html('<span style="color: #28a745; font-size: 18px;">{}</span>', '✓')
+        return format_html('<span style="color: #dc3545; font-size: 18px;">{}</span>', '✗')
     is_approved_icon.short_description = 'Approved'
     is_approved_icon.admin_order_field = 'is_approved'
     
     def is_featured_icon(self, obj):
         if obj.is_featured:
-            return format_html('<span style="color: #f39c12; font-size: 18px;">★</span>')
-        return format_html('<span style="color: #ddd; font-size: 18px;">☆</span>')
+            return format_html('<span style="color: #f39c12; font-size: 18px;">{}</span>', '★')
+        return format_html('<span style="color: #ddd; font-size: 18px;">{}</span>', '☆')
     is_featured_icon.short_description = 'Featured'
     is_featured_icon.admin_order_field = 'is_featured'
     
     def has_video_icon(self, obj):
         if obj.video_url:
-            return format_html('<span style="color: #dc3545; font-size: 16px;">&#9654;</span>')
-        return format_html('<span style="color: #ddd; font-size: 16px;">-</span>')
+            return format_html('<span style="color: #dc3545; font-size: 16px;">{}</span>', '&#9654;')
+        return format_html('<span style="color: #ddd; font-size: 16px;">{}</span>', '-')
     has_video_icon.short_description = 'Video'
     
     actions = ['approve_testimonials', 'unapprove_testimonials', 'mark_as_featured', 'remove_featured']

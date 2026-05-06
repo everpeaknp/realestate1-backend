@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.shortcuts import redirect
+from django.urls import reverse
 from .models import BlogPost, Comment, BlogCategory, BlogTag, BlogHeroSettings
 
 
@@ -38,8 +40,16 @@ class BlogHeroSettingsAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" /><br><small style="color: #666;">Using fallback URL</small>',
                 obj.background_image_url
             )
-        return format_html('<p style="color: #999;">No image</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No image')
     background_image_preview.short_description = 'Preview'
+    
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = BlogHeroSettings.objects.first()
+        if obj:
+            url = reverse('admin:blog_blogherosettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
     
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
@@ -104,8 +114,8 @@ class BlogPostAdmin(admin.ModelAdmin):
     
     def is_published_icon(self, obj):
         if obj.is_published:
-            return format_html('<span style="color: #28a745; font-size: 18px;">✓</span>')
-        return format_html('<span style="color: #dc3545; font-size: 18px;">✗</span>')
+            return format_html('<span style="color: #28a745; font-size: 18px;">{}</span>', '✓')
+        return format_html('<span style="color: #dc3545; font-size: 18px;">{}</span>', '✗')
     is_published_icon.short_description = 'Published'
     is_published_icon.admin_order_field = 'is_published'
     
@@ -125,7 +135,7 @@ class BlogPostAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-height: 200px; max-width: 300px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />',
                 obj.featured_image.url
             )
-        return format_html('<p style="color: #999;">No image uploaded</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No image uploaded')
     featured_image_preview.short_description = 'Featured Image Preview'
     
     def author_avatar_preview(self, obj):
@@ -134,7 +144,7 @@ class BlogPostAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-height: 100px; max-width: 100px; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />',
                 obj.author_avatar.url
             )
-        return format_html('<p style="color: #999;">No avatar uploaded</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No avatar uploaded')
     author_avatar_preview.short_description = 'Author Avatar Preview'
     
     actions = ['publish_posts', 'unpublish_posts']
@@ -226,7 +236,6 @@ class BlogCategoryAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description')
     prepopulated_fields = {'slug': ('name',)}
     readonly_fields = ('created_at', 'updated_at')
-    list_editable = ('order',)
     list_per_page = 50
     
     fieldsets = (

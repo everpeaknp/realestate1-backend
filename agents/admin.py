@@ -40,13 +40,13 @@ class AgentAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-height: 150px; max-width: 150px; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
                 url
             )
-        return format_html('<p style="color: #999;">No avatar</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No avatar')
     avatar_preview.short_description = 'Avatar Preview'
     
     def is_active_icon(self, obj):
         if obj.is_active:
-            return format_html('<span style="color: #28a745; font-size: 18px;">✓</span>')
-        return format_html('<span style="color: #dc3545; font-size: 18px;">✗</span>')
+            return format_html('<span style="color: #28a745; font-size: 18px;">{}</span>', '✓')
+        return format_html('<span style="color: #dc3545; font-size: 18px;">{}</span>', '✗')
     is_active_icon.short_description = 'Active'
     is_active_icon.admin_order_field = 'is_active'
     
@@ -58,7 +58,7 @@ class AgentAdmin(admin.ModelAdmin):
                 obj.id,
                 count
             )
-        return format_html('<span style="color: #999;">0 properties</span>')
+        return format_html('<span style="color: #999;">{}</span>', '0 properties')
     property_count.short_description = 'Properties'
     
     def specialty_count_display(self, obj):
@@ -76,7 +76,12 @@ class AgentAdmin(admin.ModelAdmin):
             links.append('<a href="{}" target="_blank" style="margin-right: 5px; color: #e1306c;">IG</a>'.format(obj.instagram))
         if obj.linkedin:
             links.append('<a href="{}" target="_blank" style="margin-right: 5px; color: #0077b5;">LI</a>'.format(obj.linkedin))
-        return format_html(' | '.join(links)) if links else format_html('<span style="color: #999;">-</span>')
+        
+        if links:
+            # Django 6.0 requires explicit format string with placeholders
+            return format_html('{}', ' | '.join(links))
+        else:
+            return format_html('<span style="color: #999;">{}</span>', '-')
     social_links.short_description = 'Social Media'
     
     actions = ['activate_agents', 'deactivate_agents']

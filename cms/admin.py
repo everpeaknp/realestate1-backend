@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.shortcuts import redirect
+from django.urls import reverse
 from .models import (
     HeaderSettings, NavigationLink, FooterSettings, FooterLink, 
     NewsletterSettings, PropertySidebarSettings, PropertiesHeroSettings
@@ -21,6 +23,14 @@ class HeaderSettingsAdmin(admin.ModelAdmin):
         }),
     )
     
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = HeaderSettings.objects.first()
+        if obj:
+            url = reverse('admin:cms_headersettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+    
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
         return not HeaderSettings.objects.exists()
@@ -33,7 +43,6 @@ class HeaderSettingsAdmin(admin.ModelAdmin):
 @admin.register(NavigationLink)
 class NavigationLinkAdmin(admin.ModelAdmin):
     list_display = ['name', 'href', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name', 'href']
     ordering = ['order', 'id']
@@ -82,6 +91,14 @@ class FooterSettingsAdmin(admin.ModelAdmin):
         }),
     )
     
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = FooterSettings.objects.first()
+        if obj:
+            url = reverse('admin:cms_footersettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+    
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
         return not FooterSettings.objects.exists()
@@ -94,7 +111,6 @@ class FooterSettingsAdmin(admin.ModelAdmin):
 @admin.register(FooterLink)
 class FooterLinkAdmin(admin.ModelAdmin):
     list_display = ['name', 'href', 'order', 'is_active']
-    list_editable = ['order', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name', 'href']
     ordering = ['order', 'id']
@@ -134,6 +150,14 @@ class NewsletterSettingsAdmin(admin.ModelAdmin):
         }),
     )
     
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = NewsletterSettings.objects.first()
+        if obj:
+            url = reverse('admin:cms_newslettersettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+    
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
         return not NewsletterSettings.objects.exists()
@@ -160,6 +184,14 @@ class PropertySidebarSettingsAdmin(admin.ModelAdmin):
         }),
     )
     
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = PropertySidebarSettings.objects.first()
+        if obj:
+            url = reverse('admin:cms_propertysidebarsettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
+    
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
         return not PropertySidebarSettings.objects.exists()
@@ -185,6 +217,14 @@ class PropertiesHeroSettingsAdmin(admin.ModelAdmin):
             'fields': ('is_active',)
         }),
     )
+    
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = PropertiesHeroSettings.objects.first()
+        if obj:
+            url = reverse('admin:cms_propertiesherosettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
     
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)

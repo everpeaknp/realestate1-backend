@@ -33,7 +33,7 @@ class ProjectsHeroSettingsAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
                 url
             )
-        return format_html('<p style="color: #999;">No background image</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No background image')
     background_preview.short_description = 'Background Preview'
     
     def has_add_permission(self, request):
@@ -68,7 +68,6 @@ class ProjectAdmin(admin.ModelAdmin):
     list_display = ('title', 'location', 'category', 'completion_date', 'is_featured', 'order')
     list_filter = ('category', 'is_featured', 'completion_date')
     search_fields = ('title', 'description', 'location')
-    list_editable = ('is_featured', 'order')
     date_hierarchy = 'completion_date'
     inlines = [ProjectImageInline]
     
@@ -88,7 +87,6 @@ class ProjectImageAdmin(admin.ModelAdmin):
     list_display = ('project', 'title', 'order', 'image_preview', 'created_at')
     list_filter = ('project', 'created_at')
     search_fields = ('title', 'caption', 'project__title')
-    list_editable = ('order',)
     readonly_fields = ('image_preview', 'created_at')
     
     fieldsets = (

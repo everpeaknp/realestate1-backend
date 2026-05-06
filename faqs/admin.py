@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.shortcuts import redirect
+from django.urls import reverse
 from .models import FAQ, FAQsHeroSettings
 
 
@@ -33,8 +35,16 @@ class FAQsHeroSettingsAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />',
                 url
             )
-        return format_html('<p style="color: #999;">No background image</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No background image')
     background_preview.short_description = 'Background Preview'
+    
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = FAQsHeroSettings.objects.first()
+        if obj:
+            url = reverse('admin:faqs_faqsherosettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
     
     def has_add_permission(self, request):
         # Only allow one instance (singleton)
@@ -52,7 +62,6 @@ class FAQAdmin(admin.ModelAdmin):
     list_filter = ('category', 'is_active', 'created_at')
     search_fields = ('question', 'answer')
     readonly_fields = ('created_at', 'updated_at')
-    list_editable = ('order',)
     date_hierarchy = 'created_at'
     list_per_page = 50
     
@@ -85,8 +94,8 @@ class FAQAdmin(admin.ModelAdmin):
     
     def is_active_icon(self, obj):
         if obj.is_active:
-            return format_html('<span style="color: #28a745; font-size: 18px;">✓</span>')
-        return format_html('<span style="color: #dc3545; font-size: 18px;">✗</span>')
+            return format_html('<span style="color: #28a745; font-size: 18px;">{}</span>', '✓')
+        return format_html('<span style="color: #dc3545; font-size: 18px;">{}</span>', '✗')
     is_active_icon.short_description = 'Active'
     is_active_icon.admin_order_field = 'is_active'
     

@@ -129,7 +129,8 @@ class ChatMessageAdmin(admin.ModelAdmin):
                 </div>
             ''')
         html.append('</div>')
-        return format_html(''.join(html))
+        # Django 6.0 requires explicit format string with placeholders
+        return format_html('{}', ''.join(html))
     full_conversation.short_description = 'Full Conversation'
 
     fieldsets = (
@@ -156,7 +157,6 @@ class ChatbotRuleAdmin(admin.ModelAdmin):
     list_filter = ('match_type', 'is_active', 'priority', 'created_at')
     search_fields = ('name', 'pattern', 'response')
     readonly_fields = ('created_at', 'updated_at', 'test_hint')
-    list_editable = ('priority',)
     date_hierarchy = 'created_at'
     list_per_page = 50
 
@@ -210,8 +210,8 @@ class ChatbotRuleAdmin(admin.ModelAdmin):
 
     def is_active_icon(self, obj):
         if obj.is_active:
-            return format_html('<span style="color:#28a745;font-size:18px;">✓</span>')
-        return format_html('<span style="color:#dc3545;font-size:18px;">✗</span>')
+            return format_html('<span style="color:#28a745;font-size:18px;">{}</span>', '✓')
+        return format_html('<span style="color:#dc3545;font-size:18px;">{}</span>', '✗')
     is_active_icon.short_description = 'Active'
     is_active_icon.admin_order_field = 'is_active'
 
@@ -263,7 +263,6 @@ class KnowledgeBaseAdmin(admin.ModelAdmin):
     list_filter = ('category', 'is_active', 'priority', 'created_at')
     search_fields = ('question', 'answer', 'keywords')
     readonly_fields = ('created_at', 'updated_at', 'keyword_preview')
-    list_editable = ('priority',)
     date_hierarchy = 'created_at'
     list_per_page = 50
 
@@ -303,8 +302,8 @@ class KnowledgeBaseAdmin(admin.ModelAdmin):
 
     def is_active_icon(self, obj):
         if obj.is_active:
-            return format_html('<span style="color:#28a745;font-size:18px;">✓</span>')
-        return format_html('<span style="color:#dc3545;font-size:18px;">✗</span>')
+            return format_html('<span style="color:#28a745;font-size:18px;">{}</span>', '✓')
+        return format_html('<span style="color:#dc3545;font-size:18px;">{}</span>', '✗')
     is_active_icon.short_description = 'Active'
     is_active_icon.admin_order_field = 'is_active'
 

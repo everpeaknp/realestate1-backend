@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.shortcuts import redirect
+from django.urls import reverse
 from .models import Property, PropertyImage, PropertyFeature, PropertiesHeroSettings
 
 
@@ -34,8 +36,16 @@ class PropertiesHeroSettingsAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-width: 600px; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" /><br><small style="color: #666;">Using fallback URL</small>',
                 obj.background_image_url
             )
-        return format_html('<p style="color: #999;">No image</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No image')
     background_image_preview.short_description = 'Preview'
+    
+    def changelist_view(self, request, extra_context=None):
+        """Redirect to the single instance edit page for singleton model"""
+        obj = PropertiesHeroSettings.objects.first()
+        if obj:
+            url = reverse('admin:properties_propertiesherosettings_change', args=[obj.pk])
+            return redirect(url)
+        return super().changelist_view(request, extra_context=extra_context)
     
     def has_add_permission(self, request):
         # Only allow one instance (singleton pattern)
@@ -61,7 +71,7 @@ class PropertyImageInline(admin.TabularInline):
                 '<img src="{}" style="max-height: 80px; max-width: 120px; border-radius: 4px; object-fit: cover;" />',
                 obj.image.url
             )
-        return format_html('<span style="color: #999;">No image</span>')
+        return format_html('<span style="color: #999;">{}</span>', 'No image')
     image_preview.short_description = 'Preview'
 
 
@@ -157,8 +167,8 @@ class PropertyAdmin(admin.ModelAdmin):
     
     def is_featured_icon(self, obj):
         if obj.is_featured:
-            return format_html('<span style="color: #ffc107; font-size: 18px;">★</span>')
-        return format_html('<span style="color: #ddd; font-size: 18px;">☆</span>')
+            return format_html('<span style="color: #ffc107; font-size: 18px;">{}</span>', '★')
+        return format_html('<span style="color: #ddd; font-size: 18px;">{}</span>', '☆')
     is_featured_icon.short_description = 'Featured'
     is_featured_icon.admin_order_field = 'is_featured'
     
@@ -168,7 +178,7 @@ class PropertyAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-height: 200px; max-width: 300px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />',
                 obj.main_image.url
             )
-        return format_html('<p style="color: #999;">No image uploaded</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No image uploaded')
     main_image_preview.short_description = 'Main Image Preview'
     
     def floor_plan_preview(self, obj):
@@ -177,7 +187,7 @@ class PropertyAdmin(admin.ModelAdmin):
                 '<img src="{}" style="max-height: 200px; max-width: 300px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />',
                 obj.floor_plan.url
             )
-        return format_html('<p style="color: #999;">No floor plan uploaded</p>')
+        return format_html('<p style="color: #999;">{}</p>', 'No floor plan uploaded')
     floor_plan_preview.short_description = 'Floor Plan Preview'
     
     actions = ['mark_as_featured', 'remove_featured', 'mark_as_available', 'mark_as_sold', 'mark_as_rented']
@@ -214,7 +224,6 @@ class PropertyImageAdmin(admin.ModelAdmin):
     list_display = ('property', 'caption', 'order', 'image_preview')
     list_filter = ('property',)
     search_fields = ('property__title', 'caption')
-    list_editable = ('order',)
     
     def image_preview(self, obj):
         if obj.image:
@@ -229,7 +238,6 @@ class PropertyFeatureAdmin(admin.ModelAdmin):
     list_display = ('property', 'category', 'name', 'icon', 'order')
     list_filter = ('category', 'property')
     search_fields = ('property__title', 'name')
-    list_editable = ('order',)
     
     fieldsets = (
         (None, {
