@@ -125,8 +125,16 @@ USE_I18N = True
 USE_TZ = True
 
 # Media files
-MEDIA_URL = '/media/'
+MEDIA_URL = config('MEDIA_URL', default='/media/')
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# If in production and BASE_URL is provided, force MEDIA_URL to be absolute
+# This prevents internal Docker hostnames from leaking into the frontend
+BASE_URL = config('BASE_URL', default=None)
+if not DEBUG and BASE_URL:
+    BASE_URL = BASE_URL.rstrip('/')
+    if not MEDIA_URL.startswith('http'):
+        MEDIA_URL = f"{BASE_URL}{MEDIA_URL}"
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
