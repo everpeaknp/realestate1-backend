@@ -15,6 +15,7 @@ from .serializers import (
     ChatResponseSerializer,
     MessageHistorySerializer
 )
+from .chatbot_engine import ChatbotEngine
 from rest_framework.permissions import AllowAny
 
 from django.views.decorators.csrf import csrf_exempt
