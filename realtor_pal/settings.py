@@ -2,6 +2,9 @@
 Django settings for Lily White Realestate project.
 """
 
+"""
+Django Settings v1.1 - Triggering CI/CD Test
+"""
 from pathlib import Path
 from decouple import config
 import dj_database_url
