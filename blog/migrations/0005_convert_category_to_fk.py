@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 import django.db.models.deletion
-import ckeditor_uploader.fields
+import django_ckeditor_5.fields
 
 
 class Migration(migrations.Migration):
@@ -58,11 +58,12 @@ class Migration(migrations.Migration):
             name='category_old',
         ),
         
-        # Step 5: Update the content field to use RichTextUploadingField
+        # Step 5: Update the content field to use CKEditor5Field
         migrations.AlterField(
             model_name='blogpost',
             name='content',
-            field=ckeditor_uploader.fields.RichTextUploadingField(
+            field=django_ckeditor_5.fields.CKEditor5Field(
+                config_name='extends',
                 help_text='Full blog post content with rich text editor'
             ),
         ),
