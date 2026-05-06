@@ -154,8 +154,10 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # Trust HTTPS termination done at reverse proxy (Nginx/Caddy)
+# This ensures Django uses the correct public hostname and protocol
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 # REST Framework settings
 REST_FRAMEWORK = {
