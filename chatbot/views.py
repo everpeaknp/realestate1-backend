@@ -18,6 +18,9 @@ from .serializers import (
 from .chatbot_engine import ChatbotEngine
 
 
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
 class ChatbotRateThrottle(AnonRateThrottle):
     """
     Custom rate throttle for chatbot API
@@ -26,6 +29,7 @@ class ChatbotRateThrottle(AnonRateThrottle):
     rate = '30/min'
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class ChatbotViewSet(viewsets.ViewSet):
     """
     ViewSet for chatbot interactions with security features:
