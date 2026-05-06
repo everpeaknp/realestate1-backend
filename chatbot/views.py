@@ -15,8 +15,7 @@ from .serializers import (
     ChatResponseSerializer,
     MessageHistorySerializer
 )
-from .chatbot_engine import ChatbotEngine
-
+from rest_framework.permissions import AllowAny
 
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -39,6 +38,8 @@ class ChatbotViewSet(viewsets.ViewSet):
     - Message persistence
     """
     
+    authentication_classes = []
+    permission_classes = [AllowAny]
     throttle_classes = [ChatbotRateThrottle]
     
     def __init__(self, *args, **kwargs):
