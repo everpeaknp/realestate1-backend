@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from django.core.validators import MinValueValidator
-from ckeditor_uploader.fields import RichTextUploadingField
+from django_ckeditor_5.fields import CKEditor5Field
 
 
 class BlogHeroSettings(models.Model):
@@ -105,8 +105,8 @@ class BlogPost(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True, blank=True)
     excerpt = models.TextField(max_length=500, help_text="Short description for listing pages")
-    content = RichTextUploadingField(
-        config_name='blog',
+    content = CKEditor5Field(
+        config_name='extends',
         help_text="Full blog post content with rich text editor"
     )
     featured_image = models.ImageField(

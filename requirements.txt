@@ -9,7 +9,7 @@ psycopg2-binary==2.9.9
 python-decouple==3.8
 drf-spectacular==0.27.1
 nltk==3.8.1
-django-ckeditor==6.7.3
+django-ckeditor-5==0.2.15
 requests==2.31.0
 # ML dependencies — binary wheels are pre-installed in Dockerfile before this step
 numpy>=1.26.0

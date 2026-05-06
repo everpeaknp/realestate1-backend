@@ -14,8 +14,8 @@ from properties.eagle_proxy import (
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # CKEditor upload URLs (required for RichTextUploadingField)
-    path('ckeditor/', include('ckeditor_uploader.urls')),
+    # CKEditor 5 upload URLs
+    path('ckeditor5/', include('django_ckeditor_5.urls')),
 
     # Eagle API proxy routes (must come before other API routes)
     path('api/eagle/properties/', eagle_properties_proxy, name='eagle-properties-proxy'),
