@@ -37,7 +37,7 @@ urlpatterns = [
     path('api/cms/', include('cms.urls')),
     path('api/home/', include('home.urls')),
     path('api/homeworth/', include('homeworth.urls')),
-    path('api/homeworth/', include('homeworth.urls')),
+    path('api/services/', include('services.urls')),
 
     # API documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

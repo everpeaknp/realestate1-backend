@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'cms',
     'home',
     'homeworth',
+    'services',
 ]
 
 MIDDLEWARE = [
@@ -215,7 +216,7 @@ JAZZMIN_SETTINGS = {
     
     "show_sidebar": True,
     "navigation_expanded": True,
-    "hide_apps": ["services"],
+    "hide_apps": [],
     "hide_models": [
         "properties.PropertiesHeroSettings",
         "properties.PropertyImage",
