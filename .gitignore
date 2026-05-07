@@ -43,3 +43,11 @@ local_settings.py
 test/
 
 *:Zone.Identifier
+
+# Node.js files (this is a Django project)
+node_modules/
+package.json
+package-lock.json
+*.js
+!manage.py
+!*/migrations/*.py

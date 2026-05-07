@@ -32,7 +32,6 @@ urlpatterns = [
     path('api/faqs/', include('faqs.urls')),
     path('api/agents/', include('agents.urls')),
     path('api/chatbot/', include('chatbot.urls')),
-    path('api/services/', include('services.urls')),
     path('api/about/', include('about.urls')),
     path('api/contact/', include('contact.urls')),
     path('api/cms/', include('cms.urls')),

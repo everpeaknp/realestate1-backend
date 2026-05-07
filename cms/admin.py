@@ -9,11 +9,15 @@ from .models import (
 
 @admin.register(HeaderSettings)
 class HeaderSettingsAdmin(admin.ModelAdmin):
-    list_display = ['logo_text', 'phone_number', 'is_active']
+    list_display = ['logo_text', 'site_name', 'phone_number', 'is_active']
     
     fieldsets = (
         ('Logo & Branding', {
             'fields': ('logo_image', 'logo_text')
+        }),
+        ('Site Favicon & Name', {
+            'fields': ('favicon', 'site_name'),
+            'description': 'Upload a favicon (32x32px or 64x64px recommended) and set the site name for browser tabs'
         }),
         ('Contact Information', {
             'fields': ('phone_number',)

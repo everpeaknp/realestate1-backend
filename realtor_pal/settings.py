@@ -50,7 +50,6 @@ INSTALLED_APPS = [
     'faqs',
     'agents',
     'chatbot',
-    'services',
     'about',
     'contact',
     'cms',

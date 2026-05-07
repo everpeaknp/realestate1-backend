@@ -14,10 +14,11 @@ class NavigationLinkSerializer(serializers.ModelSerializer):
 class HeaderSettingsSerializer(serializers.ModelSerializer):
     navigation_links = serializers.SerializerMethodField()
     logo_image = serializers.SerializerMethodField()
+    favicon = serializers.SerializerMethodField()
     
     class Meta:
         model = HeaderSettings
-        fields = ['id', 'logo_image', 'logo_text', 'phone_number', 'is_active', 'navigation_links']
+        fields = ['id', 'logo_image', 'logo_text', 'phone_number', 'favicon', 'site_name', 'is_active', 'navigation_links']
     
     def get_logo_image(self, obj):
         if obj.logo_image:
@@ -25,6 +26,14 @@ class HeaderSettingsSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.logo_image.url)
             return obj.logo_image.url
+        return None
+    
+    def get_favicon(self, obj):
+        if obj.favicon:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.favicon.url)
+            return obj.favicon.url
         return None
     
     def get_navigation_links(self, obj):

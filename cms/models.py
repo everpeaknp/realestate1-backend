@@ -6,6 +6,20 @@ class HeaderSettings(models.Model):
     logo_image = models.ImageField(upload_to='cms/logos/', blank=True, null=True, help_text="Upload a custom logo image (optional)")
     logo_text = models.CharField(max_length=100, default="Lily White Realestate")
     phone_number = models.CharField(max_length=50, default="+1 (321) 456 7890")
+    
+    # Favicon settings
+    favicon = models.ImageField(
+        upload_to='cms/favicons/', 
+        blank=True, 
+        null=True, 
+        help_text="Upload site favicon (recommended: 32x32px or 64x64px .ico, .png)"
+    )
+    site_name = models.CharField(
+        max_length=100, 
+        default="Lily White Realestate",
+        help_text="Site name for browser tab and SEO"
+    )
+    
     is_active = models.BooleanField(default=True)
     
     class Meta:
