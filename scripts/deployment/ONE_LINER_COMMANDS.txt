@@ -1,0 +1,63 @@
+================================================================================
+ONE-LINER COMMANDS FOR SSH SESSION
+================================================================================
+
+After connecting via: ssh root@187.127.115.70
+Password: [REDACTED]
+
+Copy and paste these commands:
+
+
+1. FIND EVERYTHING
+==================
+echo "=== Finding Projects ===" && find /root /var/www /opt /home -maxdepth 3 -name "realestate1-*" -type d 2>/dev/null && echo "" && echo "=== Services ===" && systemctl status gunicorn --no-pager | head -20 && echo "" && pm2 list && echo "" && echo "=== Ports ===" && lsof -i :8000 && lsof -i :3000
+
+
+2. DEPLOY BACKEND (if in /var/www/)
+====================================
+cd /var/www/realestate1-backend && pwd && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn && sudo systemctl status gunicorn
+
+
+3. DEPLOY BACKEND (if in /root/)
+=================================
+cd /root/realestate1-backend && pwd && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn && sudo systemctl status gunicorn
+
+
+4. DEPLOY FRONTEND (if in /var/www/)
+=====================================
+cd /var/www/realestate1-frontend && pwd && git pull origin main && npm install && npm run build && pm2 restart realestate1-frontend && pm2 save && pm2 list
+
+
+5. DEPLOY FRONTEND (if in /root/)
+==================================
+cd /root/realestate1-frontend && pwd && git pull origin main && npm install && npm run build && pm2 restart realestate1-frontend && pm2 save && pm2 list
+
+
+6. CHECK EVERYTHING
+===================
+echo "=== Backend Service ===" && systemctl status gunicorn --no-pager | head -10 && echo "" && echo "=== Frontend Service ===" && pm2 list && echo "" && echo "=== Nginx ===" && systemctl status nginx --no-pager | head -10 && echo "" && echo "=== Test Backend ===" && curl -I http://127.0.0.1:8000/admin/ && echo "" && echo "=== Test Frontend ===" && curl -I http://127.0.0.1:3000/
+
+
+7. VIEW LOGS
+============
+echo "=== Gunicorn Logs ===" && sudo journalctl -u gunicorn -n 20 --no-pager && echo "" && echo "=== PM2 Logs ===" && pm2 logs realestate1-frontend --lines 20 --nostream && echo "" && echo "=== Nginx Error Log ===" && sudo tail -20 /var/log/nginx/error.log
+
+
+8. RESTART EVERYTHING
+=====================
+sudo systemctl restart gunicorn && sudo systemctl restart nginx && pm2 restart all && pm2 save && echo "All services restarted!"
+
+
+================================================================================
+STEP-BY-STEP PROCESS
+================================================================================
+
+1. Connect: ssh root@187.127.115.70
+2. Run command #1 to find projects
+3. Based on output, run command #2 or #3 for backend
+4. Run command #4 or #5 for frontend
+5. Run command #6 to verify
+6. Visit https://bijenkhadka.com.au/admin in browser
+
+
+================================================================================

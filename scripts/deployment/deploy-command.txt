@@ -1,0 +1,18 @@
+To deploy the latest changes to production, run this command in PowerShell:
+
+ssh root@187.127.115.70
+
+Then enter password: [REDACTED]
+
+Once connected, run these commands:
+
+# Backend Deployment
+cd realestate1-backend && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn
+
+# Frontend Deployment  
+cd ~/realestate1-frontend && git pull origin main && npm install && npm run build && pm2 restart realestate1-frontend && pm2 save
+
+# Check status
+pm2 status
+
+Done! Your latest changes are now deployed.

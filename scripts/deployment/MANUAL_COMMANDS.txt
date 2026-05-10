@@ -1,0 +1,153 @@
+================================================================================
+MANUAL COMMANDS TO RUN ON SERVER
+================================================================================
+
+Step 1: Connect to Server
+--------------------------
+Open PowerShell and run:
+
+ssh root@187.127.115.70
+
+Password: [REDACTED]
+
+
+Step 2: Find Project Directories
+---------------------------------
+Once connected, run these commands:
+
+# Find backend
+find /root /var/www /opt /home -maxdepth 3 -name "realestate1-backend" -type d 2>/dev/null
+
+# Find frontend
+find /root /var/www /opt /home -maxdepth 3 -name "realestate1-frontend" -type d 2>/dev/null
+
+# Quick check common locations
+ls -la /var/www/
+ls -la /root/
+ls -la /opt/
+
+
+Step 3: Check CI/CD Setup
+--------------------------
+# Check for GitHub Actions (replace PATH with actual path from step 2)
+ls -la /PATH/TO/realestate1-backend/.github/workflows/
+ls -la /PATH/TO/realestate1-frontend/.github/workflows/
+
+# Check systemd services
+systemctl list-units --type=service | grep -E 'gunicorn|django|realestate|nextjs'
+
+# Check PM2 processes
+pm2 list
+
+# Check cron jobs
+crontab -l
+
+
+Step 4: Check Service Status
+-----------------------------
+# Check backend service
+systemctl status gunicorn
+ps aux | grep python
+
+# Check frontend service
+pm2 status
+
+# Check nginx
+systemctl status nginx
+
+# Check what's running on ports
+lsof -i :8000
+lsof -i :3000
+
+
+Step 5: Check Git Status
+-------------------------
+# Backend (replace PATH)
+cd /PATH/TO/realestate1-backend
+git status
+git log --oneline -5
+git branch
+
+# Frontend (replace PATH)
+cd /PATH/TO/realestate1-frontend
+git status
+git log --oneline -5
+git branch
+
+
+Step 6: Deploy Backend (Once you find the path)
+------------------------------------------------
+# Example if backend is in /var/www/
+cd /var/www/realestate1-backend
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py collectstatic --noinput
+sudo systemctl restart gunicorn
+sudo systemctl status gunicorn
+
+
+Step 7: Deploy Frontend (Once you find the path)
+-------------------------------------------------
+# Example if frontend is in /var/www/
+cd /var/www/realestate1-frontend
+git pull origin main
+npm install
+npm run build
+pm2 restart realestate1-frontend
+pm2 save
+pm2 status
+
+
+Step 8: Verify Deployment
+--------------------------
+# Test backend
+curl http://127.0.0.1:8000/admin/
+
+# Test frontend
+curl http://127.0.0.1:3000/
+
+# Restart nginx
+sudo systemctl restart nginx
+
+# Test in browser
+# Visit: https://bijenkhadka.com.au/admin
+
+
+================================================================================
+EXPECTED LOCATIONS (Try these first)
+================================================================================
+
+Most likely locations:
+1. /var/www/realestate1-backend
+2. /var/www/realestate1-frontend
+
+Or:
+1. /root/realestate1-backend
+2. /root/realestate1-frontend
+
+Or:
+1. /opt/realestate1-backend
+2. /opt/realestate1-frontend
+
+
+================================================================================
+QUICK DIAGNOSTIC COMMANDS
+================================================================================
+
+# All in one - copy and paste this:
+echo "=== Searching for projects ===" && \
+find /root /var/www /opt -maxdepth 3 -name "realestate1-*" -type d 2>/dev/null && \
+echo "" && \
+echo "=== Checking services ===" && \
+systemctl status gunicorn --no-pager && \
+echo "" && \
+pm2 list && \
+echo "" && \
+echo "=== Checking ports ===" && \
+lsof -i :8000 && \
+lsof -i :3000
+
+
+================================================================================

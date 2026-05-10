@@ -1,0 +1,75 @@
+﻿========================================
+COMPREHENSIVE SERVER SEARCH
+========================================
+
+1. Searching for realestate folders...
+----------------------------------------
+ssh : bash: line 6: $'\r': command not found
+At D:\everacy\realstate\search-server.ps1:124 char:31
++ ... output = $searchScript | ssh "${SSH_USER}@${SSH_HOST}" "bash -s" 2>&1
++                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (bash: line 6: $'\r': command not found:String) [], RemoteExce 
+   ption
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+bash: line 11: $'\r': command not found
+/opt/stacks/realestate1
+/opt/data/realestate1
+
+2. Contents of /var/www/
+----------------------------------------
+Directory not found
+
+3. Contents of /root/
+----------------------------------------
+total 72
+drwx------  7 root root  4096 May  3 10:01 .
+drwxr-xr-x 23 root root  4096 May  6 04:08 ..
+-rw-------  1 root root 25682 May  6 04:19 .bash_history
+-rw-r--r--  1 root root  3106 Apr 22  2024 .bashrc
+drwx------  2 root root  4096 May  2 10:38 .cache
+drwx------  3 root root  4096 May  2 11:16 .docker
+-rw-r--r--  1 root root    87 May  2 11:15 .env
+drwxr-xr-x  3 root root  4096 May  2 12:40 .local
+-rw-r--r--  1 root root   161 Apr 22  2024 .profile
+drwx------  2 root root  4096 May  2 11:35 .ssh
+drwx---rwx 14 root root  4096 May  3 10:03 media
+bash: line 16: $'\r': command not found
+
+4. Contents of /opt/
+----------------------------------------
+total 28
+drwxr-xr-x  7 root root 4096 May  2 10:50 .
+drwxr-xr-x 23 root root 4096 May  6 04:08 ..
+drwxr-xr-x  2 root root 4096 May  2 10:50 backups
+drwx--x--x  4 root root 4096 May  2 10:25 containerd
+drwxr-xr-x  4 root root 4096 May  2 11:16 data
+drwxr-xr-x  2 root root 4096 May  2 10:50 shared
+drwxr-xr-x  4 root root 4096 May  2 11:16 stacks
+
+5. Contents of /home/
+----------------------------------------
+total 12
+drwxr-xr-x  3 root   root   4096 Apr  7 07:41 .
+drwxr-xr-x 23 root   root   4096 May  6 04:08 ..
+drwxr-x---  3 ubuntu ubuntu 4096 Apr  7 07:41 ubuntu
+
+6. Git repositories
+----------------------------------------
+
+7. Django projects (manage.py)
+----------------------------------------
+
+8. Node.js projects (package.json)
+----------------------------------------
+
+9. PM2 Processes
+----------------------------------------
+bash: line 21: $'\r': command not found
+bash: line 26: $'\r': command not found
+bash: line 31: $'\r': command not found
+sed: -e expression #1, char 11: unknown option to `s'
+bash: line 36: $'\r': command not found
+bash: line 41: $'\r': command not found
+bash: line 46: $'\r': command not found
+bash: line 101: syntax error: unexpected end of file

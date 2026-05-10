@@ -1,0 +1,101 @@
+================================================================================
+MANUAL DEPLOYMENT TO bijenkhadka.com.au
+================================================================================
+
+Step 1: Open PowerShell and connect to server
+----------------------------------------------
+ssh root@187.127.115.70
+
+Password: [REDACTED]
+
+
+Step 2: Once connected, run these commands
+-------------------------------------------
+
+# Find your project directories first
+ls -la /var/www/
+ls -la /root/
+
+# Then deploy backend (adjust path if needed)
+cd /var/www/realestate1-backend && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn
+
+# Deploy frontend (adjust path if needed)
+cd /var/www/realestate1-frontend && git pull origin main && npm install && npm run build && pm2 restart realestate1-frontend && pm2 save
+
+
+Step 3: Verify deployment
+--------------------------
+pm2 status
+sudo systemctl status gunicorn
+sudo systemctl status nginx
+
+
+Step 4: Test your website
+--------------------------
+Open browser and visit:
+- https://bijenkhadka.com.au/
+- https://bijenkhadka.com.au/admin
+
+
+================================================================================
+ALTERNATIVE: If directories are in /root/
+================================================================================
+
+# Backend
+cd /root/realestate1-backend && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn
+
+# Frontend
+cd /root/realestate1-frontend && git pull origin main && npm install && npm run build && pm2 restart realestate1-frontend && pm2 save
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If you can't find directories:
+-------------------------------
+find / -name "realestate1-*" -type d 2>/dev/null
+
+
+If services won't restart:
+---------------------------
+# Check what's running
+sudo systemctl list-units --type=service | grep -E 'gunicorn|nginx'
+pm2 list
+
+# Restart nginx
+sudo systemctl restart nginx
+
+
+View logs:
+----------
+# Backend logs
+sudo journalctl -u gunicorn -n 50
+tail -f /var/log/gunicorn/error.log
+
+# Frontend logs
+pm2 logs realestate1-frontend
+
+# Nginx logs
+sudo tail -f /var/log/nginx/error.log
+
+
+================================================================================
+WHAT'S BEING DEPLOYED
+================================================================================
+
+Backend (commit 43ac999):
+- Improved admin interfaces
+- Updated dependencies
+- Configuration improvements
+- Utility scripts
+
+Frontend (commit 5b148a1):
+- Lazy loading components
+- Image optimization
+- Skeleton loaders
+- Social share functionality
+- UI improvements
+
+
+================================================================================

@@ -1,0 +1,125 @@
+================================================================================
+IMMEDIATE FIX FOR 502 BAD GATEWAY ERROR
+================================================================================
+
+The backend is down. Here's how to fix it RIGHT NOW:
+
+STEP 1: Connect to Server
+--------------------------
+Open PowerShell and run:
+
+    ssh root@187.127.115.70
+
+Password: [REDACTED]
+
+
+STEP 2: Run Diagnostic
+-----------------------
+Once connected, paste this command:
+
+    systemctl status gunicorn && ps aux | grep python
+
+
+STEP 3A: If Gunicorn Service Exists
+------------------------------------
+Run these commands one by one:
+
+    # Find backend directory
+    cd /var/www/realestate1-backend || cd /root/realestate1-backend
+
+    # Pull latest code
+    git pull origin main
+
+    # Activate virtual environment
+    source venv/bin/activate
+
+    # Install dependencies
+    pip install -r requirements.txt
+
+    # Run migrations
+    python manage.py migrate
+
+    # Collect static files
+    python manage.py collectstatic --noinput
+
+    # Restart gunicorn
+    sudo systemctl restart gunicorn
+
+    # Check status
+    sudo systemctl status gunicorn
+
+
+STEP 3B: If Gunicorn Service Doesn't Exist
+-------------------------------------------
+Check if using PM2:
+
+    pm2 list
+    pm2 restart realestate1-backend
+
+
+STEP 4: Check if Fixed
+-----------------------
+    curl http://127.0.0.1:8000/admin/
+
+If you see HTML output, backend is working!
+
+
+STEP 5: Restart Nginx
+----------------------
+    sudo systemctl restart nginx
+
+
+STEP 6: Test in Browser
+------------------------
+Visit: https://bijenkhadka.com.au/admin
+
+You should now see the Django admin login page!
+
+
+================================================================================
+QUICK ONE-LINER (Try This First!)
+================================================================================
+
+Paste this entire command:
+
+cd /var/www/realestate1-backend && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn && echo "Backend restarted!"
+
+
+If that doesn't work, try with /root/ path:
+
+cd /root/realestate1-backend && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && sudo systemctl restart gunicorn && echo "Backend restarted!"
+
+
+================================================================================
+IF STILL NOT WORKING
+================================================================================
+
+Get diagnostic info:
+
+    sudo journalctl -u gunicorn -n 50
+    sudo tail -20 /var/log/nginx/error.log
+    ps aux | grep python
+
+Then share the output so we can identify the specific issue.
+
+
+================================================================================
+COMMON ISSUES
+================================================================================
+
+1. Virtual environment not activated
+   → Make sure you run: source venv/bin/activate
+
+2. Wrong directory
+   → Find it: find / -name "realestate1-backend" -type d 2>/dev/null
+
+3. Service not enabled
+   → Run: sudo systemctl enable gunicorn
+   → Then: sudo systemctl start gunicorn
+
+4. Port conflict
+   → Check: sudo lsof -i :8000
+   → Kill if needed: sudo kill -9 <PID>
+
+
+================================================================================

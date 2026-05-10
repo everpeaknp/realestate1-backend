@@ -1,0 +1,67 @@
+================================================================================
+QUICK DEPLOYMENT REFERENCE - Frontend Fallback Data Fix
+================================================================================
+
+SERVER: 187.127.115.70
+USER: root
+PASSWORD: [REDACTED]
+PROJECT: /opt/stacks/realestate1
+
+================================================================================
+ONE-LINE DEPLOYMENT COMMAND (Copy & Paste into SSH):
+================================================================================
+
+cd /opt/stacks/realestate1/frontend && git pull origin main && cd /opt/stacks/realestate1 && docker compose build --no-cache realestate1-frontend && docker compose up -d realestate1-frontend && sleep 10 && docker logs realestate1-frontend --tail 50
+
+================================================================================
+STEP-BY-STEP (If you prefer):
+================================================================================
+
+1. SSH to server:
+   ssh root@187.127.115.70
+
+2. Pull changes:
+   cd /opt/stacks/realestate1/frontend
+   git pull origin main
+
+3. Rebuild frontend:
+   cd /opt/stacks/realestate1
+   docker compose build --no-cache realestate1-frontend
+
+4. Restart container:
+   docker compose up -d realestate1-frontend
+
+5. Check logs:
+   docker logs realestate1-frontend --tail 50
+
+================================================================================
+VERIFICATION:
+================================================================================
+
+Visit: https://bijenkhadka.com.au/
+
+SHOULD SEE:
+✓ "Bijen khadka | Investment property specialist"
+✓ "Help with building and manage investment properties portfolio"
+
+SHOULD NOT SEE:
+✗ "Justin Nelson | Boston Realtor"
+✗ Any hardcoded fallback data
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+If still showing old data:
+- Clear browser cache (Ctrl+Shift+Delete)
+- Try incognito mode
+- Check console for errors (F12)
+
+If homepage is blank:
+- Check backend: docker ps | grep realestate1-backend
+- Check logs: docker logs realestate1-frontend --tail 100
+- Test API: curl http://realestate1-backend:8000/api/home/hero-settings/
+
+================================================================================
+BUILD TIME: ~10 minutes
+================================================================================

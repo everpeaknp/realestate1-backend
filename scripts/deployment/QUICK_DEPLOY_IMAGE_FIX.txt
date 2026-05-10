@@ -1,0 +1,93 @@
+═══════════════════════════════════════════════════════════════
+  QUICK DEPLOY: IMAGE LOADING FIX
+═══════════════════════════════════════════════════════════════
+
+📋 CHANGES SUMMARY:
+  ✓ Backend: Enhanced URL generation (USE_X_FORWARDED_PORT)
+  ✓ Frontend: Removed hardcoded fallback images
+  ✓ Frontend: Improved error logging
+  ✓ Frontend: Added /test-api-images debug page
+
+═══════════════════════════════════════════════════════════════
+
+🚀 DEPLOYMENT COMMANDS (Copy & Paste):
+
+# 1. SSH to server
+ssh root@187.127.115.70
+
+# 2. Pull changes
+cd /opt/stacks/realestate1/backend && git pull origin main
+cd /opt/stacks/realestate1/frontend && git pull origin main
+
+# 3. Rebuild containers
+cd /opt/stacks/realestate1
+docker compose build --no-cache realestate1-backend
+docker compose build --no-cache realestate1-frontend
+
+# 4. Restart containers
+docker compose up -d realestate1-backend realestate1-frontend
+
+# 5. Check logs
+docker compose logs -f realestate1-backend realestate1-frontend
+
+═══════════════════════════════════════════════════════════════
+
+🧪 TESTING:
+
+1. Visit: https://bijenkhadka.com.au/test-api-images
+   - Open DevTools (F12) → Console tab
+   - Look for ✅ (success) or ❌ (failure) logs
+   - Check if URLs are: https://bijenkhadka.com.au/media/...
+
+2. Visit: https://bijenkhadka.com.au/
+   - Check if all images load correctly
+   - No broken image icons
+   - No fallback Unsplash images
+
+3. Check Network Tab:
+   - Filter by "Img"
+   - All requests should be status 200
+   - No CORS errors
+
+═══════════════════════════════════════════════════════════════
+
+✅ SUCCESS INDICATORS:
+  • Console: "✅ Image loaded successfully"
+  • All images display correctly
+  • URLs: https://bijenkhadka.com.au/media/...
+  • Network: All 200 status codes
+
+❌ FAILURE INDICATORS:
+  • Console: "❌ Image failed to load"
+  • Broken image icons
+  • URLs: http://realestate1-backend:8000/media/...
+  • Network: 404 or 403 errors
+
+═══════════════════════════════════════════════════════════════
+
+🔧 QUICK FIXES:
+
+If images still fail:
+
+1. Check nginx X-Forwarded headers:
+   location / {
+       proxy_set_header Host $host;
+       proxy_set_header X-Forwarded-Proto $scheme;
+       proxy_set_header X-Forwarded-Port $server_port;
+   }
+
+2. Verify media files exist:
+   docker compose exec realestate1-backend ls -la /app/media/
+
+3. Test direct media access:
+   curl -I https://bijenkhadka.com.au/media/[image-path]
+
+═══════════════════════════════════════════════════════════════
+
+📞 SERVER INFO:
+  Host: 187.127.115.70
+  User: root
+  Password: [REDACTED]
+  Project: /opt/stacks/realestate1/
+
+═══════════════════════════════════════════════════════════════

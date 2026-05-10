@@ -1,0 +1,119 @@
+================================================================================
+FIND ALL FOLDERS ON SERVER
+================================================================================
+
+Connect to server:
+ssh root@187.127.115.70
+Password: [REDACTED]
+
+
+COMMAND 1: Find all realestate-related folders
+===============================================
+find / -type d -name "*realestate*" 2>/dev/null
+
+
+COMMAND 2: List all folders in common web directories
+======================================================
+echo "=== /var/www/ ===" && ls -la /var/www/ && \
+echo "" && \
+echo "=== /root/ ===" && ls -la /root/ && \
+echo "" && \
+echo "=== /opt/ ===" && ls -la /opt/ && \
+echo "" && \
+echo "=== /home/ ===" && ls -la /home/
+
+
+COMMAND 3: Find all git repositories
+=====================================
+find /var/www /root /opt /home -name ".git" -type d 2>/dev/null | sed 's/\.git$//'
+
+
+COMMAND 4: Find all Node.js projects (package.json)
+====================================================
+find /var/www /root /opt /home -name "package.json" -type f 2>/dev/null | xargs dirname
+
+
+COMMAND 5: Find all Python/Django projects (manage.py)
+=======================================================
+find /var/www /root /opt /home -name "manage.py" -type f 2>/dev/null | xargs dirname
+
+
+COMMAND 6: Find all folders with specific names
+================================================
+find / -maxdepth 4 -type d \( -name "*backend*" -o -name "*frontend*" -o -name "*realestate*" -o -name "*bijenkhadka*" \) 2>/dev/null
+
+
+COMMAND 7: List all systemd service files
+==========================================
+ls -la /etc/systemd/system/ | grep -E 'gunicorn|django|realestate|nextjs|node'
+
+
+COMMAND 8: Check PM2 process working directories
+=================================================
+pm2 list && pm2 info realestate1-frontend 2>/dev/null && pm2 info realestate1-backend 2>/dev/null
+
+
+COMMAND 9: Find all nginx site configurations
+==============================================
+ls -la /etc/nginx/sites-available/ && \
+echo "" && \
+ls -la /etc/nginx/sites-enabled/
+
+
+COMMAND 10: Complete system scan (may take time)
+=================================================
+echo "=== All directories in /var/www/ ===" && \
+find /var/www -maxdepth 2 -type d 2>/dev/null && \
+echo "" && \
+echo "=== All directories in /root/ ===" && \
+find /root -maxdepth 2 -type d 2>/dev/null && \
+echo "" && \
+echo "=== All directories in /opt/ ===" && \
+find /opt -maxdepth 2 -type d 2>/dev/null && \
+echo "" && \
+echo "=== All directories in /home/ ===" && \
+find /home -maxdepth 2 -type d 2>/dev/null
+
+
+================================================================================
+RECOMMENDED: Run this comprehensive one-liner
+================================================================================
+
+echo "========================================" && \
+echo "SEARCHING FOR PROJECTS" && \
+echo "========================================" && \
+echo "" && \
+echo "=== Searching for realestate folders ===" && \
+find / -maxdepth 4 -type d -name "*realestate*" 2>/dev/null && \
+echo "" && \
+echo "=== Git repositories ===" && \
+find /var/www /root /opt /home -maxdepth 3 -name ".git" -type d 2>/dev/null | sed 's/\.git$//' && \
+echo "" && \
+echo "=== /var/www/ contents ===" && \
+ls -la /var/www/ 2>/dev/null && \
+echo "" && \
+echo "=== /root/ contents ===" && \
+ls -la /root/ 2>/dev/null && \
+echo "" && \
+echo "=== PM2 processes ===" && \
+pm2 list 2>/dev/null && \
+echo "" && \
+echo "=== Systemd services ===" && \
+systemctl list-units --type=service --no-pager | grep -E 'gunicorn|django|realestate|nextjs' && \
+echo "" && \
+echo "=== Nginx sites ===" && \
+ls -la /etc/nginx/sites-enabled/ 2>/dev/null && \
+echo "" && \
+echo "========================================" && \
+echo "SEARCH COMPLETE" && \
+echo "========================================"
+
+
+================================================================================
+QUICK SEARCH (Fastest)
+================================================================================
+
+ls -la /var/www/ && ls -la /root/ && find /var/www /root -maxdepth 2 -name "*realestate*" -type d 2>/dev/null
+
+
+================================================================================
