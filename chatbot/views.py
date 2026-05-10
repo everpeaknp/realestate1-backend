@@ -282,6 +282,13 @@ class ChatbotViewSet(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+    def list(self, request):
+        """
+        Root endpoint returns configuration
+        GET /api/chatbot/
+        """
+        return self.config(request)
+
     @action(detail=False, methods=['get'])
     def config(self, request):
         """
