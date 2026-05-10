@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ChatSession, ChatMessage
+from .models import ChatSession, ChatMessage, ChatbotSettings
 import re
 import html
 
@@ -146,3 +146,10 @@ class MessageHistorySerializer(serializers.Serializer):
     role = serializers.CharField()
     message = serializers.CharField()
     timestamp = serializers.DateTimeField()
+
+
+class ChatbotConfigSerializer(serializers.ModelSerializer):
+    """Serializer for global chatbot and Tawk.to settings"""
+    class Meta:
+        model = ChatbotSettings
+        fields = ['is_enabled', 'tawk_enabled', 'tawk_property_id', 'tawk_widget_id', 'updated_at']

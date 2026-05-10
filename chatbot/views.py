@@ -7,13 +7,14 @@ from django.core.cache import cache
 from django.utils import timezone
 from datetime import timedelta
 import uuid
-from .models import ChatSession, ChatMessage
+from .models import ChatSession, ChatMessage, ChatbotSettings
 from .serializers import (
     ChatSessionSerializer,
     ChatMessageSerializer,
     ChatRequestSerializer,
     ChatResponseSerializer,
-    MessageHistorySerializer
+    MessageHistorySerializer,
+    ChatbotConfigSerializer
 )
 from .chatbot_engine import ChatbotEngine
 from rest_framework.permissions import AllowAny
@@ -280,7 +281,21 @@ class ChatbotViewSet(viewsets.ViewSet):
                 {'error': 'Session not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
-    
+
+    @action(detail=False, methods=['get'])
+    def config(self, request):
+        """
+        Get global chatbot configuration
+        GET /api/chatbot/config/
+        """
+        config = ChatbotSettings.objects.first()
+        if not config:
+            # Create default if not exists
+            config = ChatbotSettings.objects.create(is_enabled=True)
+        
+        serializer = ChatbotConfigSerializer(config)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get'])
     def health(self, request):
         """

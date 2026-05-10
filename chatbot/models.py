@@ -131,3 +131,25 @@ class KnowledgeBase(models.Model):
         import re
         words = re.findall(r'\b\w+\b', self.question.lower())
         return [w for w in words if w not in stop and len(w) > 2]
+
+
+class ChatbotSettings(models.Model):
+    """Global configuration for the chatbot and external chat integrations"""
+    is_enabled = models.BooleanField(default=True, help_text="Enable or disable the custom AI chatbot in the frontend.")
+    
+    # Tawk.to Integration
+    tawk_enabled = models.BooleanField(default=False, help_text="Enable or disable the Tawk.to live chat.")
+    tawk_property_id = models.CharField(max_length=100, blank=True, help_text="Tawk.to Property ID (found in embed URL: embed.tawk.to/[PROPERTY_ID]/...)")
+    tawk_widget_id = models.CharField(max_length=100, blank=True, help_text="Tawk.to Widget ID (found in embed URL: embed.tawk.to/.../[WIDGET_ID])")
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Chatbot Settings'
+        verbose_name_plural = 'Chatbot Settings'
+
+    def __str__(self):
+        status = []
+        if self.is_enabled: status.append("AI Chatbot")
+        if self.tawk_enabled: status.append("Tawk.to")
+        return f"Active Integrations: {', '.join(status) if status else 'None'}"

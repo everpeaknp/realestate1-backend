@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import path
 from django.shortcuts import render, get_object_or_404
-from .models import ChatSession, ChatMessage, KnowledgeBase, ChatbotRule
+from .models import ChatSession, ChatMessage, KnowledgeBase, ChatbotRule, ChatbotSettings
 
 
 # ------------------------------------------------------------------ #
@@ -345,3 +345,30 @@ class KnowledgeBaseAdmin(admin.ModelAdmin):
             obj.save()
         self.message_user(request, f'{queryset.count()} entries priority decreased.', 'info')
     decrease_priority.short_description = '↓ Decrease priority'
+
+
+@admin.register(ChatbotSettings)
+class ChatbotSettingsAdmin(admin.ModelAdmin):
+    """Admin for global chatbot and integration settings"""
+    list_display = ('__str__', 'is_enabled', 'tawk_enabled', 'updated_at')
+    
+    fieldsets = (
+        ('AI Chatbot (Custom)', {
+            'fields': ('is_enabled',),
+            'description': 'Configure the custom built-in AI assistant.'
+        }),
+        ('Live Chat Integration (Tawk.to)', {
+            'fields': ('tawk_enabled', 'tawk_property_id', 'tawk_widget_id'),
+            'description': 'Enable live chat via Tawk.to. Property ID and Widget ID can be found in your Tawk.to dashboard embed script URL: https://embed.tawk.to/PROPERTY_ID/WIDGET_ID'
+        }),
+    )
+
+    def has_add_permission(self, request):
+        # Only allow one instance
+        if self.model.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the global configuration
+        return False

@@ -258,6 +258,7 @@ JAZZMIN_SETTINGS = {
         "chatbot.ChatMessage": "fas fa-comment-dots",
         "chatbot.KnowledgeBase": "fas fa-brain",
         "chatbot.ChatbotRule": "fas fa-code-branch",
+        "chatbot.ChatbotSettings": "fas fa-toggle-on",
         "services.Service": "fas fa-concierge-bell",
         "about.Goal": "fas fa-bullseye",
         "about.ServicesProvide": "fas fa-hands-helping",

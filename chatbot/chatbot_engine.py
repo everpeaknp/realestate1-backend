@@ -51,6 +51,83 @@ class ChatbotEngine:
         if prop_response:
             return self._result(prop_response, "property_details", 0.98, sentiment)
 
+        # 1.5. Property search priority check
+        # If user clearly wants to SEE/FIND properties (not SELL), skip KB/FAQ
+        msg_lower = message.lower()
+        property_search_indicators = [
+            # GENERIC PROPERTY SEARCH
+            "property", "properties", "real estate", "realestate", "listing", "listings",
+            "property listings", "real estate listings", "available properties", "available homes",
+            "show properties", "list properties", "browse properties", "find properties",
+            "search properties", "explore properties", "view properties", "show listings",
+            "show all properties", "show all listings", "list all properties", "all properties",
+            "featured properties", "featured homes", "new listings", "latest listings",
+            "active listings", "open listings", "property catalog", "property inventory",
+            "available real estate", "property options", "housing options",
+            # BUY / PURCHASE INTENT
+            "buy property", "buy properties", "buy house", "buy home", "buy apartment",
+            "buy flat", "buy villa", "buy townhouse", "buy condo", "buy land",
+            "purchase property", "purchase house", "purchase home", "purchase apartment",
+            "looking to buy", "want to buy", "interested in buying", "need to buy house",
+            "first home buyer", "investment purchase", "homes for sale", "houses for sale",
+            "apartments for sale", "villas for sale", "townhouses for sale", "units for sale",
+            "land for sale", "commercial property for sale",
+            # RENT / LEASE INTENT
+            "rent property", "rent house", "rent apartment", "rent flat", "rent home",
+            "rental properties", "rental homes", "homes for rent", "houses for rent",
+            "apartments for rent", "units for rent", "flats for rent", "lease property",
+            "lease apartment", "looking to rent", "want to rent", "need rental",
+            "find rentals", "cheap rentals", "family rental", "student accommodation",
+            # PROPERTY TYPES
+            "house", "houses", "home", "homes", "apartment", "apartments", "flat", "flats",
+            "unit", "units", "villa", "villas", "townhouse", "townhouses", "condo", "condos",
+            "studio apartment", "penthouse", "duplex", "bungalow", "granny flat", "acreage",
+            "farm house", "land", "plot", "plots", "commercial property", "office space",
+            "warehouse", "retail space", "industrial property", "coworking space", "restaurant space",
+            # AUSTRALIA LOCATIONS
+            "australia", "sydney", "melbourne", "brisbane", "perth", "adelaide", "gold coast",
+            "canberra", "hobart", "darwin", "newcastle", "geelong", "wollongong", "sunshine coast",
+            "nsw", "new south wales", "victoria", "vic", "queensland", "qld", "western australia",
+            "wa", "south australia", "sa", "tasmania", "tas", "northern territory", "nt", "act",
+            "parramatta", "blacktown", "liverpool", "bondi", "chatswood", "hurstville",
+            "bankstown", "penrith", "campbelltown", "mascot", "southbank", "st kilda",
+            "box hill", "richmond", "dandenong", "footscray", "carlton", "clayton",
+            # LOCATION PHRASES
+            "in sydney", "in melbourne", "in brisbane", "in perth", "in adelaide", "in australia",
+            "near me", "nearby properties", "homes nearby", "houses near me", "apartments near me",
+            "property near me", "close to city", "city view property", "beachfront property",
+            # BUDGET / PRICE
+            "under", "below", "above", "within budget", "cheap properties", "affordable homes",
+            "budget homes", "luxury homes", "premium properties", "high end homes",
+            "million dollar homes", "under 500k", "under 1 million", "under 2 million",
+            "under 3 million", "cheap apartments", "low budget rentals", "investment property",
+            # BEDROOM/BATHROOM QUERIES
+            "1 bedroom", "2 bedroom", "3 bedroom", "4 bedroom", "5 bedroom",
+            "1 bed", "2 bed", "3 bed", "4 bed", "5 bed",
+            "1 bhk", "2 bhk", "3 bhk", "4 bhk", "studio", "family house",
+            "1 bathroom", "2 bathroom", "3 bathroom", "ensuite", "multiple bathrooms",
+            # FEATURES / AMENITIES
+            "parking", "garage", "double garage", "garden", "backyard", "pool", "swimming pool",
+            "gym", "lift", "elevator", "balcony", "rooftop", "pet friendly", "family friendly",
+            "furnished", "fully furnished", "semi furnished", "unfurnished", "modern kitchen",
+            "renovated", "newly built", "ready to move", "smart home", "gated community",
+            "security system",
+            # INVESTMENT / COMMERCIAL
+            "investment properties", "roi properties", "rental yield", "commercial investment",
+            "office investment", "business property", "warehouse for sale", "retail investment",
+            "passive income property",
+            # NATURAL LANGUAGE QUERIES
+            "i need a house", "i need a home", "i need apartment", "i want property",
+            "i want house", "show me homes", "show me houses", "show me apartments",
+            "show me rentals", "find me a property", "help me find home", "recommend homes",
+            "recommend apartments", "looking for family home", "looking for investment property",
+            "need luxury apartment", "search property for me", "find dream home", "show best properties",
+        ]
+        if any(indicator in msg_lower for indicator in property_search_indicators):
+            # Skip KB/FAQ and go directly to property search
+            response = self._handle_property_search(message, sentiment)
+            return self._result(response, "property_search", 0.95, sentiment)
+
         # 2. Knowledge Base — semantic search
         kb_response = searcher.search_kb(message)
         if kb_response:
@@ -195,6 +272,80 @@ class ChatbotEngine:
         lines.append("")
         return "\n".join(lines)
 
+    def _format_eagle_property(self, prop: dict) -> str:
+        """Format Eagle API property for chatbot response."""
+        import re
+        
+        # Extract property details from Eagle API format
+        headline = prop.get('headline', 'Property').strip()
+        price = prop.get('price', 0)
+        property_type = prop.get('propertyType', 'Property')
+        formatted_address = prop.get('formattedAddress', 'Location not specified')
+        description = prop.get('description', '')
+        
+        # Try to extract bedrooms, bathrooms, and parking from description
+        bedrooms = 0
+        bathrooms = 0
+        parking = 0
+        
+        # Look for patterns like "4 Spacious Bedrooms", "4 bed", "4BR", etc.
+        bed_match = re.search(r'(\d+)\s*(?:Spacious\s+)?(?:Bedroom|bed|BR)', description, re.IGNORECASE)
+        if bed_match:
+            bedrooms = int(bed_match.group(1))
+        
+        # Look for patterns like "2 Modern Bathrooms", "2 bath", "2BA", etc.
+        bath_match = re.search(r'(\d+)\s*(?:Modern\s+)?(?:Bathroom|bath|BA)', description, re.IGNORECASE)
+        if bath_match:
+            bathrooms = int(bath_match.group(1))
+        
+        # Look for patterns like "Double Car Garage", "2 car garage", "2 parking", etc.
+        parking_patterns = [
+            r'Double\s+Car\s+Garage',  # Double Car Garage
+            r'(\d+)\s+Car\s+Garage',   # 2 Car Garage
+            r'(\d+)\s+Garage',         # 2 Garage
+            r'(\d+)\s+parking',        # 2 parking
+        ]
+        for pattern in parking_patterns:
+            parking_match = re.search(pattern, description, re.IGNORECASE)
+            if parking_match:
+                if 'Double' in parking_match.group(0):
+                    parking = 2
+                else:
+                    parking = int(parking_match.group(1))
+                break
+        
+        # Format price
+        price_str = f"${price:,.0f}" if price > 0 else "Price on request"
+        
+        # Build details string
+        details_parts = []
+        if bedrooms > 0:
+            details_parts.append(f"{bedrooms} bed")
+        if bathrooms > 0:
+            details_parts.append(f"{bathrooms} bath")
+        if parking > 0:
+            details_parts.append(f"{parking} parking")
+        
+        details = " | ".join(details_parts) if details_parts else "Details not specified"
+        
+        # Build response
+        lines = [
+            f"PROPERTY: {headline}",
+            f"📍 {formatted_address}",
+            f"Price: {price_str}",
+            f"Type: {property_type}",
+            f"Details: {details}",
+        ]
+        
+        # Add land size if available
+        land_size = prop.get('landSize')
+        land_units = prop.get('landSizeUnits', 'sqm')
+        if land_size:
+            lines.append(f"Land: {land_size} {land_units}")
+        
+        lines.append("")
+        return "\n".join(lines)
+
     def _format_property_details(self, prop) -> str:
         ptype = "For Sale" if prop.property_type == "FOR_SALE" else "For Rent"
         amenities = ", ".join(prop.amenities_list[:5]) if prop.amenities_list else "N/A"
@@ -230,11 +381,98 @@ class ChatbotEngine:
         ])
 
     def _handle_property_search(self, message, sentiment):
+        """
+        Handle property search - tries Eagle API first, then Django DB.
+        Eagle API is the primary source since Django DB may be empty.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         cities = self._known_cities()
         ents = extractor.extract_all(message, cities)
-
-        qs = Property.objects.filter(status="AVAILABLE")
         msg_lower = message.lower()
+
+        # Try Eagle API first (primary source)
+        try:
+            from .eagle_client import get_eagle_client
+            eagle_client = get_eagle_client()
+            
+            # Build search term from extracted entities
+            search_parts = []
+            if ents["city"]:
+                search_parts.append(ents["city"])
+            if ents["beds"]:
+                search_parts.append(f"{ents['beds']} bedroom")
+            
+            search_term = " ".join(search_parts) if search_parts else ""
+            
+            # Determine property type filter
+            property_type = None
+            if any(w in msg_lower for w in ["house", "houses"]):
+                property_type = "HOUSE"
+            elif any(w in msg_lower for w in ["apartment", "apartments", "unit", "units"]):
+                property_type = "APARTMENT"
+            elif any(w in msg_lower for w in ["townhouse", "townhouses"]):
+                property_type = "TOWNHOUSE"
+            elif any(w in msg_lower for w in ["villa", "villas"]):
+                property_type = "VILLA"
+            
+            logger.info(f"[Chatbot] Searching Eagle API: search_term='{search_term}', property_type={property_type}")
+            
+            # Search Eagle API
+            eagle_properties = eagle_client.search_properties(
+                search_term=search_term,
+                limit=20,
+                status='ACTIVE',
+                property_type=property_type
+            )
+            
+            if eagle_properties:
+                # Filter by budget if specified
+                if ents["budget"]:
+                    eagle_properties = [
+                        p for p in eagle_properties 
+                        if p.get('price', 0) <= ents["budget"]
+                    ]
+                
+                # Filter by bedrooms if specified
+                if ents["beds"]:
+                    eagle_properties = [
+                        p for p in eagle_properties 
+                        if p.get('bedrooms', 0) >= ents["beds"]
+                    ]
+                
+                # Take top 4 results
+                results = eagle_properties[:4]
+                
+                if results:
+                    filters = []
+                    if ents["city"]:   filters.append(f"in {ents['city']}")
+                    if ents["beds"]:   filters.append(f"{ents['beds']}+ bedrooms")
+                    if ents["budget"]: filters.append(f"under ${ents['budget']:,}")
+                    filter_str = f" ({', '.join(filters)})" if filters else ""
+                    
+                    response = f"Here are some properties{filter_str}:\n\n"
+                    for prop in results:
+                        response += self._format_eagle_property(prop) + "\n\n"
+                    response += "Would you like more details on any of these? Just ask!"
+                    return response
+                
+                # Eagle API returned properties but none matched filters
+                logger.info(f"[Chatbot] Eagle API returned {len(eagle_properties)} properties but none matched filters")
+                return (
+                    f"I found {len(eagle_properties)} properties, but none matched your exact criteria.\n\n"
+                    "Try adjusting your budget, bedroom count, or location, or say 'show all properties'."
+                )
+            
+            logger.info("[Chatbot] Eagle API returned no properties")
+            
+        except Exception as e:
+            logger.error(f"[Chatbot] Eagle API search failed: {str(e)}")
+            # Continue to Django DB fallback
+        
+        # Fallback to Django DB
+        qs = Property.objects.filter(status="AVAILABLE")
 
         if any(w in msg_lower for w in ["rent", "rental", "lease"]):
             qs = qs.filter(property_type="FOR_RENT")
@@ -261,10 +499,13 @@ class ChatbotEngine:
             response += "Would you like more details on any of these? Just ask!"
             return response
 
-        total = Property.objects.filter(status="AVAILABLE").count()
+        # No results from either source
+        total_django = Property.objects.filter(status="AVAILABLE").count()
         return (
-            f"No properties matched those exact criteria, but we have {total} available listings overall.\n\n"
-            "Try a different city, budget, or bedroom count, or say 'show all properties'."
+            f"No properties matched those exact criteria.\n\n"
+            f"We have {total_django} properties in our database. "
+            "Try a different city, budget, or bedroom count, or say 'show all properties'.\n\n"
+            "Note: Our live property feed may be temporarily unavailable. Please try again in a moment."
         )
 
     def _handle_property_details(self, message, sentiment):
