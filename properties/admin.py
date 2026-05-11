@@ -2,13 +2,76 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.shortcuts import redirect
 from django.urls import reverse
-from .models import Property, PropertyImage, PropertyFeature, PropertiesHeroSettings
+from .models import Property, PropertyImage, PropertyFeature, PropertiesHeroSettings, FilterOption
+
+
+from django.forms import BaseInlineFormSet
+
+
+class FilterOptionFormSet(BaseInlineFormSet):
+    def save_new(self, form, commit=True):
+        obj = super().save_new(form, commit=False)
+        obj.category = self.category_filter
+        if commit:
+            obj.save()
+        return obj
+
+
+class BaseFilterOptionInline(admin.TabularInline):
+    """Base class for filtered inlines"""
+    model = FilterOption
+    formset = FilterOptionFormSet
+    extra = 1
+    fields = ('label', 'value', 'order')
+    sortable_field_name = 'order'
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if hasattr(self, 'category_filter'):
+            return qs.filter(category=self.category_filter)
+        return qs
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        formset.category_filter = self.category_filter
+        return formset
+
+
+class PropertyTypeInline(BaseFilterOptionInline):
+    verbose_name = "Property Type"
+    verbose_name_plural = "Property Types (e.g. House, Apartment)"
+    category_filter = 'PROPERTY_TYPE'
+
+
+class MinPriceInline(BaseFilterOptionInline):
+    verbose_name = "Min Price Option"
+    verbose_name_plural = "Min Price Dropdown Options"
+    category_filter = 'MIN_PRICE'
+
+
+class MaxPriceInline(BaseFilterOptionInline):
+    verbose_name = "Max Price Option"
+    verbose_name_plural = "Max Price Dropdown Options"
+    category_filter = 'MAX_PRICE'
+
+
+class BedroomInline(BaseFilterOptionInline):
+    verbose_name = "Bedroom Option"
+    verbose_name_plural = "Bedroom Dropdown Options"
+    category_filter = 'BEDROOMS'
+
+
+class StatusInline(BaseFilterOptionInline):
+    verbose_name = "Listing Status"
+    verbose_name_plural = "Listing Status Options (e.g. For Sale, Sold)"
+    category_filter = 'STATUS'
 
 
 @admin.register(PropertiesHeroSettings)
 class PropertiesHeroSettingsAdmin(admin.ModelAdmin):
-    """Admin for Properties Hero Settings"""
+    """Admin for Properties Hero Settings with organized filter sections"""
     list_display = ['title', 'subtitle', 'is_active']
+    inlines = [PropertyTypeInline, MinPriceInline, MaxPriceInline, BedroomInline, StatusInline]
     
     fieldsets = (
         ('Hero Content', {
@@ -17,6 +80,10 @@ class PropertiesHeroSettingsAdmin(admin.ModelAdmin):
         ('Background Image', {
             'fields': ('background_image', 'background_image_preview', 'background_image_url'),
             'description': 'Upload a custom background image or use the URL fallback'
+        }),
+        ('Filter Display Settings', {
+            'fields': ('show_filters', 'filter_title'),
+            'description': 'Control the visibility and label of the filter bar'
         }),
         ('Status', {
             'fields': ('is_active',)

@@ -5,10 +5,20 @@ from .models import Property, PropertyImage, PropertyFeature, PropertiesHeroSett
 class PropertiesHeroSettingsSerializer(serializers.ModelSerializer):
     background_image = serializers.SerializerMethodField()
     background_url = serializers.SerializerMethodField()
+    property_types = serializers.SerializerMethodField()
+    min_price_options = serializers.SerializerMethodField()
+    max_price_options = serializers.SerializerMethodField()
+    bedroom_options = serializers.SerializerMethodField()
+    status_options = serializers.SerializerMethodField()
     
     class Meta:
         model = PropertiesHeroSettings
-        fields = ['id', 'title', 'subtitle', 'background_image', 'background_url', 'background_image_url', 'is_active']
+        fields = [
+            'id', 'title', 'subtitle', 'background_image', 'background_url', 
+            'background_image_url', 'is_active', 'show_filters', 'filter_title', 
+            'property_types', 'min_price_options', 'max_price_options', 
+            'bedroom_options', 'status_options'
+        ]
     
     def get_background_image(self, obj):
         if not obj.background_image:
@@ -26,6 +36,26 @@ class PropertiesHeroSettingsSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.background_image.url)
             return obj.background_image.url
         return obj.background_image_url
+
+    def _get_options(self, obj, category):
+        """Helper to fetch and format options for a category"""
+        options = obj.filter_options.filter(category=category)
+        return [{"value": opt.value, "label": opt.label} for opt in options]
+
+    def get_property_types(self, obj):
+        return self._get_options(obj, 'PROPERTY_TYPE')
+
+    def get_min_price_options(self, obj):
+        return self._get_options(obj, 'MIN_PRICE')
+
+    def get_max_price_options(self, obj):
+        return self._get_options(obj, 'MAX_PRICE')
+
+    def get_bedroom_options(self, obj):
+        return self._get_options(obj, 'BEDROOMS')
+
+    def get_status_options(self, obj):
+        return self._get_options(obj, 'STATUS')
 
 
 class PropertyImageSerializer(serializers.ModelSerializer):

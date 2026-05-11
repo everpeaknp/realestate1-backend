@@ -20,13 +20,25 @@ class PropertiesHeroSettings(models.Model):
         help_text="Fallback to URL if no image uploaded"
     )
     is_active = models.BooleanField(default=True)
-    
+
+    # ── Filter Configuration ──
+    show_filters = models.BooleanField(
+        default=True,
+        help_text="Show or hide the property filter bar"
+    )
+    filter_title = models.CharField(
+        max_length=100,
+        default="Filters",
+        blank=True,
+        help_text="Mobile toggle button label"
+    )
+
     class Meta:
-        verbose_name = 'Hero Settings'
-        verbose_name_plural = 'Hero Settings'
+        verbose_name = 'Properties Hero Settings'
+        verbose_name_plural = 'Properties Hero Settings'
     
     def __str__(self):
-        return "Properties Hero Settings"
+        return f"Properties Hero Settings - {self.title}"
     
     def save(self, *args, **kwargs):
         # Ensure only one instance exists (singleton pattern)
@@ -40,6 +52,50 @@ class PropertiesHeroSettings(models.Model):
         """Get or create the singleton settings instance"""
         settings, created = cls.objects.get_or_create(pk=1)
         return settings
+
+class FilterOption(models.Model):
+    """
+    User-friendly way to manage filter options without editing JSON.
+    """
+    CATEGORY_CHOICES = [
+        ('PROPERTY_TYPE', 'Property Type'),
+        ('MIN_PRICE', 'Min Price'),
+        ('MAX_PRICE', 'Max Price'),
+        ('BEDROOMS', 'Bedrooms'),
+        ('STATUS', 'Listing Status'),
+    ]
+    
+    hero_settings = models.ForeignKey(
+        PropertiesHeroSettings,
+        on_delete=models.CASCADE,
+        related_name='filter_options'
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        help_text="The dropdown this option belongs to"
+    )
+    label = models.CharField(
+        max_length=100,
+        help_text="The text shown to the user (e.g. '$200,000' or '3+ Beds')"
+    )
+    value = models.CharField(
+        max_length=100,
+        help_text="The internal value sent to the API (e.g. '200000' or '3')"
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        help_text="Sort order in the dropdown"
+    )
+
+    class Meta:
+        ordering = ['category', 'order', 'label']
+        verbose_name = "Filter Option"
+        verbose_name_plural = "Filter Options"
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.label}"
+
     
     @property
     def background_url(self):
