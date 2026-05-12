@@ -166,16 +166,48 @@ class Command(BaseCommand):
         """Create neighborhoods"""
         self.stdout.write('Creating neighborhoods...')
         neighborhoods = [
-            {'name': 'Downtown', 'url': 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=300&fit=crop', 'order': 1},
-            {'name': 'Suburbs', 'url': 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop', 'order': 2},
-            {'name': 'Waterfront', 'url': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop', 'order': 3},
-            {'name': 'Historic District', 'url': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop', 'order': 4},
-            {'name': 'Business District', 'url': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=300&fit=crop', 'order': 5}
+            {
+                'name': 'Downtown',
+                'description': 'Experience urban living at its finest with modern amenities, vibrant nightlife, and easy access to business districts.',
+                'price_range': '$800k — $1.5M',
+                'url': 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=400&h=300&fit=crop',
+                'order': 1
+            },
+            {
+                'name': 'Suburbs',
+                'description': 'Family-friendly neighborhoods with excellent schools, parks, and a peaceful community atmosphere.',
+                'price_range': '$500k — $900k',
+                'url': 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=300&fit=crop',
+                'order': 2
+            },
+            {
+                'name': 'Waterfront',
+                'description': 'Luxury properties with stunning water views, private docks, and exclusive beach access.',
+                'price_range': '$1.2M — $3M',
+                'url': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&fit=crop',
+                'order': 3
+            },
+            {
+                'name': 'Historic District',
+                'description': 'Charming heritage homes with character, architectural beauty, and rich cultural history.',
+                'price_range': '$600k — $1.2M',
+                'url': 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400&h=300&fit=crop',
+                'order': 4
+            },
+            {
+                'name': 'Business District',
+                'description': 'Prime commercial and mixed-use properties perfect for professionals and investors.',
+                'price_range': '$700k — $2M',
+                'url': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=300&fit=crop',
+                'order': 5
+            }
         ]
         
         for data in neighborhoods:
             neighborhood = Neighborhood.objects.create(
                 name=data['name'],
+                description=data['description'],
+                price_range=data['price_range'],
                 order=data['order']
             )
             image_content = self.download_image(data['url'])

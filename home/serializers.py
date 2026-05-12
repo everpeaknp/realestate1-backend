@@ -43,7 +43,7 @@ class NeighborhoodSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Neighborhood
-        fields = ['id', 'name', 'image', 'order', 'is_active']
+        fields = ['id', 'name', 'description', 'price_range', 'image', 'order', 'is_active']
 
     def get_image(self, obj):
         if obj.image:

@@ -15,6 +15,7 @@ class Agent(models.Model):
         help_text='Upload an image file. If provided, this takes priority over the URL field above.'
     )
     bio = models.TextField()
+    quote = models.TextField(blank=True, help_text="Personal quote or motto")
     specialties = models.JSONField(default=list, help_text="List of specialties")
     
     # Social media links

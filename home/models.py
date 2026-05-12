@@ -74,6 +74,8 @@ class HowItWorksStep(models.Model):
 class Neighborhood(models.Model):
     """Popular neighborhoods section"""
     name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, help_text='Description of the neighborhood')
+    price_range = models.CharField(max_length=100, blank=True, help_text='e.g., $800k — $1.5M')
     image = models.ImageField(upload_to='home/neighborhoods/')
     order = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True)

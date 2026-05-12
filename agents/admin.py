@@ -21,7 +21,7 @@ class AgentAdmin(admin.ModelAdmin):
             'fields': ('name', 'email', 'phone', 'is_active')
         }),
         ('Profile', {
-            'fields': ('avatar_image', 'avatar', 'avatar_preview', 'bio', 'specialties')
+            'fields': ('avatar_image', 'avatar', 'avatar_preview', 'bio', 'quote', 'specialties')
         }),
         ('Social Media', {
             'fields': ('facebook', 'twitter', 'instagram', 'linkedin'),

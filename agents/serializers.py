@@ -11,7 +11,7 @@ class AgentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Agent
         fields = [
-            'id', 'name', 'email', 'phone', 'avatar', 'bio',
+            'id', 'name', 'email', 'phone', 'avatar', 'bio', 'quote',
             'specialties', 'social_media', 'is_active', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']

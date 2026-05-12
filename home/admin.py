@@ -69,10 +69,21 @@ class HowItWorksStepAdmin(admin.ModelAdmin):
 
 @admin.register(Neighborhood)
 class NeighborhoodAdmin(admin.ModelAdmin):
-    list_display = ['name', 'order', 'is_active', 'created_at']
+    list_display = ['name', 'price_range', 'order', 'is_active', 'created_at']
     list_filter = ['is_active']
-    search_fields = ['name']
+    search_fields = ['name', 'description']
     ordering = ['order', 'id']
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'description', 'price_range')
+        }),
+        ('Image', {
+            'fields': ('image',)
+        }),
+        ('Display Settings', {
+            'fields': ('order', 'is_active')
+        }),
+    )
 
 
 class BenefitInline(admin.TabularInline):
