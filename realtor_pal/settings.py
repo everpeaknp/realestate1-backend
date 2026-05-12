@@ -196,6 +196,20 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
+# Property feed source (EAGLE_API or REAXML)
+PROPERTY_FEED_SOURCE = config('PROPERTY_FEED_SOURCE', default='EAGLE_API').strip().upper()
+
+# REAXML feed ingestion settings
+REAXML_FTP_HOST = config('REAXML_FTP_HOST', default='')
+REAXML_FTP_PORT = config('REAXML_FTP_PORT', default=21, cast=int)
+REAXML_FTP_USERNAME = config('REAXML_FTP_USERNAME', default='')
+REAXML_FTP_PASSWORD = config('REAXML_FTP_PASSWORD', default='')
+REAXML_FTP_PATH = config('REAXML_FTP_PATH', default='.')
+REAXML_FTP_PASSIVE = config('REAXML_FTP_PASSIVE', default=True, cast=bool)
+REAXML_LOCAL_DIR = config('REAXML_LOCAL_DIR', default='')
+REAXML_XML_USERNAME = config('REAXML_XML_USERNAME', default='')
+REAXML_XML_PASSWORD = config('REAXML_XML_PASSWORD', default='')
+
 # Jazzmin settings
 JAZZMIN_SETTINGS = {
     "site_title": "Lily White Realestate Admin",

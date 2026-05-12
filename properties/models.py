@@ -228,3 +228,55 @@ class PropertyFeature(models.Model):
     
     def __str__(self):
         return f"{self.property.title} - {self.name}"
+
+
+class ExternalPropertyFeed(models.Model):
+    """
+    Normalized listing store for REAXML imports.
+
+    We keep this separate from the curated Property model so XML-synced listings
+    can be updated automatically without affecting manual/admin-managed entries.
+    """
+
+    external_id = models.CharField(max_length=120, unique=True, db_index=True)
+    agent_id = models.CharField(max_length=80, blank=True, default='')
+    listing_type = models.CharField(max_length=40, blank=True, default='')
+    status = models.CharField(max_length=40, db_index=True, default='CURRENT')
+    property_type = models.CharField(max_length=80, blank=True, default='', db_index=True)
+    headline = models.CharField(max_length=300, blank=True, default='')
+    description = models.TextField(blank=True, default='')
+    formatted_address = models.CharField(max_length=400, blank=True, default='')
+    suburb = models.CharField(max_length=120, blank=True, default='')
+    state = models.CharField(max_length=120, blank=True, default='')
+    postcode = models.CharField(max_length=20, blank=True, default='')
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    price = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    advertised_price = models.CharField(max_length=300, blank=True, default='')
+    land_size = models.CharField(max_length=80, blank=True, default='')
+    land_size_units = models.CharField(max_length=40, blank=True, default='')
+    featured = models.BooleanField(default=False)
+    bedrooms = models.PositiveSmallIntegerField(null=True, blank=True)
+    bathrooms = models.DecimalField(max_digits=4, decimal_places=1, null=True, blank=True)
+    garages = models.PositiveSmallIntegerField(null=True, blank=True)
+    agent_name = models.CharField(max_length=200, blank=True, default='')
+    agent_email = models.EmailField(blank=True, default='')
+    agent_phone = models.CharField(max_length=80, blank=True, default='')
+    agent_mobile = models.CharField(max_length=80, blank=True, default='')
+    image_urls = models.JSONField(default=list, blank=True)
+    floorplan_urls = models.JSONField(default=list, blank=True)
+    inspection_times = models.JSONField(default=list, blank=True)
+    raw_payload = models.JSONField(default=dict, blank=True)
+    source_file = models.CharField(max_length=255, blank=True, default='')
+    is_active = models.BooleanField(default=True, db_index=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'External Property Feed'
+        verbose_name_plural = 'External Property Feeds'
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f'{self.external_id} - {self.formatted_address or self.headline}'

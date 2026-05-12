@@ -10,6 +10,11 @@ from properties.eagle_proxy import (
     eagle_property_detail_proxy,
     eagle_test_auth_proxy,
 )
+from properties.reaxml_views import (
+    reaxml_properties,
+    reaxml_property_detail,
+    reaxml_health,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -21,6 +26,9 @@ urlpatterns = [
     path('api/eagle/properties/', eagle_properties_proxy, name='eagle-properties-proxy'),
     path('api/eagle/properties/<str:property_id>/', eagle_property_detail_proxy, name='eagle-property-detail-proxy'),
     path('api/eagle/test-auth/', eagle_test_auth_proxy, name='eagle-test-auth-proxy'),
+    path('api/reaxml/properties/', reaxml_properties, name='reaxml-properties'),
+    path('api/reaxml/properties/<str:property_id>/', reaxml_property_detail, name='reaxml-property-detail'),
+    path('api/reaxml/health/', reaxml_health, name='reaxml-health'),
 
     # API endpoints
     path('api/properties/', include('properties.urls')),

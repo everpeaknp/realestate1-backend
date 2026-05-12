@@ -2,7 +2,14 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.shortcuts import redirect
 from django.urls import reverse
-from .models import Property, PropertyImage, PropertyFeature, PropertiesHeroSettings, FilterOption
+from .models import (
+    Property,
+    PropertyImage,
+    PropertyFeature,
+    PropertiesHeroSettings,
+    FilterOption,
+    ExternalPropertyFeed,
+)
 
 
 from django.forms import BaseInlineFormSet
@@ -311,3 +318,27 @@ class PropertyFeatureAdmin(admin.ModelAdmin):
             'fields': ('property', 'category', 'name', 'icon', 'order')
         }),
     )
+
+
+@admin.register(ExternalPropertyFeed)
+class ExternalPropertyFeedAdmin(admin.ModelAdmin):
+    list_display = (
+        'external_id',
+        'status',
+        'property_type',
+        'formatted_address',
+        'price',
+        'is_active',
+        'updated_at',
+    )
+    list_filter = ('status', 'property_type', 'listing_type', 'is_active', 'updated_at')
+    search_fields = (
+        'external_id',
+        'formatted_address',
+        'headline',
+        'suburb',
+        'agent_name',
+        'agent_email',
+    )
+    readonly_fields = ('created_at', 'updated_at', 'last_seen_at')
+    list_per_page = 50
