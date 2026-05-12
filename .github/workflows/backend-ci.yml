@@ -50,12 +50,6 @@ jobs:
 
             # Serialize deploys even if multiple workflows fire close together.
             flock /tmp/realestate1-deploy.lock bash -c '
-              cd /opt/stacks/realestate1/frontend
-              git fetch origin main
-              git checkout main
-              git reset --hard origin/main
-              git clean -fd
-
               cd /opt/stacks/realestate1/backend
               git fetch origin main
               git checkout main
@@ -63,7 +57,7 @@ jobs:
               git clean -fd
 
               cd /opt/stacks/realestate1
-              docker compose up -d --build realestate1-frontend realestate1-backend
+              docker compose up -d --build realestate1-backend
 
               docker compose ps
               
