@@ -42,6 +42,13 @@ class ChatbotEngine:
     def process_message(self, message: str, session_id: str | None = None) -> dict:
         intent, confidence = self._detect_intent(message)
         sentiment = self._analyze_sentiment(message)
+        extracted_budget = extractor.extract_budget(message)
+        budget_only_query = self._looks_like_budget_query(message, extracted_budget)
+
+        # Budget-only queries should bypass generic rules/KB and go to property search.
+        if budget_only_query:
+            response = self._handle_property_search(message, sentiment)
+            return self._result(response, "property_search", 0.95, sentiment)
 
         # 0. Rule-based — ABSOLUTE HIGHEST PRIORITY
         rule_response = self._match_rule(message)
@@ -245,6 +252,46 @@ class ChatbotEngine:
                 return (min(first, second), max(first, second))
 
         return (None, extracted_budget)
+
+    def _looks_like_budget_query(self, message: str, extracted_budget: int | None) -> bool:
+        if extracted_budget is None:
+            return False
+
+        msg = message.strip().lower()
+        if re.fullmatch(r"[$\s\d,.\-mk]+", msg):
+            return True
+
+        budget_terms = [
+            "around",
+            "about",
+            "approx",
+            "approximately",
+            "under",
+            "below",
+            "between",
+            "budget",
+            "to",
+            "-",
+        ]
+        return any(term in msg for term in budget_terms)
+
+    def _dedupe_property_dicts(self, properties: list[dict], max_items: int = 4) -> list[dict]:
+        unique: list[dict] = []
+        seen: set[tuple[str, str, str]] = set()
+
+        for prop in properties:
+            key = (
+                str(prop.get("headline", "")).strip().lower(),
+                str(prop.get("formattedAddress", "")).strip().lower(),
+                str(prop.get("price", "")),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(prop)
+            if len(unique) >= max_items:
+                break
+        return unique
 
     # ---------------------------------------------------------------- #
     #  Rule matching                                                    #
@@ -470,7 +517,24 @@ class ChatbotEngine:
             if budget_max is not None:
                 qs = qs.filter(price__lte=budget_max)
 
-            results = list(qs.order_by("-updated_at")[:4])
+            candidates = list(qs.order_by("-updated_at")[:40])
+            normalized: list[dict] = []
+            for listing in candidates:
+                normalized.append(
+                    {
+                        "headline": listing.headline or listing.formatted_address or "Property",
+                        "price": _price_value(listing.price) or 0,
+                        "propertyType": listing.property_type or listing.listing_type or "Property",
+                        "formattedAddress": listing.formatted_address or listing.suburb or "Location not specified",
+                        "description": listing.description or "",
+                        "bedrooms": listing.bedrooms,
+                        "bathrooms": _price_value(listing.bathrooms),
+                        "garages": listing.garages,
+                        "landSize": listing.land_size,
+                        "landSizeUnits": listing.land_size_units or "sqm",
+                    }
+                )
+            results = self._dedupe_property_dicts(normalized, max_items=4)
             if results:
                 filters = []
                 if ents["city"]:
@@ -483,20 +547,8 @@ class ChatbotEngine:
                 filter_str = f" ({', '.join(filters)})" if filters else ""
 
                 response = f"Here are some properties{filter_str}:\n\n"
-                for listing in results:
-                    payload = {
-                        "headline": listing.headline or listing.formatted_address or "Property",
-                        "price": _price_value(listing.price) or 0,
-                        "propertyType": listing.property_type or listing.listing_type or "Property",
-                        "formattedAddress": listing.formatted_address or listing.suburb or "Location not specified",
-                        "description": listing.description or "",
-                        "bedrooms": listing.bedrooms,
-                        "bathrooms": _price_value(listing.bathrooms),
-                        "garages": listing.garages,
-                        "landSize": listing.land_size,
-                        "landSizeUnits": listing.land_size_units or "sqm",
-                    }
-                    response += self._format_eagle_property(payload) + "\n\n"
+                for prop in results:
+                    response += self._format_eagle_property(prop) + "\n\n"
                 response += "Would you like more details on any of these? Just ask!"
                 return response
 
@@ -560,7 +612,7 @@ class ChatbotEngine:
                         if (p.get('bedrooms') or p.get('beds') or 0) >= ents["beds"]
                     ]
 
-                results = eagle_properties[:4]
+                results = self._dedupe_property_dicts(eagle_properties, max_items=4)
 
                 if results:
                     filters = []

@@ -92,16 +92,28 @@ class SpacyExtractor:
         return None
 
     def _regex_budget(self, text: str) -> Optional[int]:
-        patterns = [
-            (r"\$?([\d,]+)\s*(?:million|m)\b", 1_000_000),
-            (r"\$?([\d,]+)\s*k\b",             1_000),
-            (r"\$?([\d,]+),000\b",             1_000),
-            (r"\$?([\d]{4,})\b",               1),
-        ]
-        for pat, mult in patterns:
-            m = re.search(pat, text.lower())
-            if m:
-                return int(m.group(1).replace(",", "")) * mult
+        txt = text.lower()
+
+        # Supports: 1.5m, 1.5 million, 1500k, $1.25m
+        m = re.search(r"\$?\s*([\d][\d,]*(?:\.\d+)?)\s*(million|m)\b", txt)
+        if m:
+            return int(float(m.group(1).replace(",", "")) * 1_000_000)
+
+        m = re.search(r"\$?\s*([\d][\d,]*(?:\.\d+)?)\s*(thousand|k)\b", txt)
+        if m:
+            return int(float(m.group(1).replace(",", "")) * 1_000)
+
+        # Supports: 1,200,000 or 1200000
+        m = re.search(r"\$?\s*([\d]{1,3}(?:,\d{3})+|[\d]{4,})\b", txt)
+        if m:
+            return int(m.group(1).replace(",", ""))
+
+        # Supports shorthand like "1500" in budget context => 1,500,000
+        m = re.search(r"\b([\d]{3,4})\b", txt)
+        if m and any(term in txt for term in ["budget", "under", "around", "about", "price"]):
+            value = int(m.group(1))
+            if value < 10_000:
+                return value * 1_000
         return None
 
     # ---- Bedrooms ----
