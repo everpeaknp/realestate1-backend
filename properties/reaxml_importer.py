@@ -230,6 +230,61 @@ class ReaxmlFile:
     content: str
 
 
+def _extract_coordinates(listing: ET.Element) -> tuple[Decimal | None, Decimal | None]:
+    # 1) Direct coordinate tags
+    latitude = _to_decimal(
+        _first_text(
+            listing,
+            ['latitude', 'lat', 'geoLatitude', 'geo_latitude'],
+        )
+    )
+    longitude = _to_decimal(
+        _first_text(
+            listing,
+            ['longitude', 'long', 'lon', 'lng', 'geoLongitude', 'geo_longitude'],
+        )
+    )
+    if latitude is not None and longitude is not None:
+        return latitude, longitude
+
+    # 2) Coordinate attributes on common location nodes
+    lat_attr = _first_attr(
+        listing,
+        ['address', 'geolocation', 'geoLocation', 'location', 'position', 'coordinates'],
+        ['latitude', 'lat', 'y'],
+    )
+    lng_attr = _first_attr(
+        listing,
+        ['address', 'geolocation', 'geoLocation', 'location', 'position', 'coordinates'],
+        ['longitude', 'long', 'lon', 'lng', 'x'],
+    )
+    lat_from_attr = _to_decimal(lat_attr)
+    lng_from_attr = _to_decimal(lng_attr)
+    if lat_from_attr is not None and lng_from_attr is not None:
+        return lat_from_attr, lng_from_attr
+
+    # 3) Combined coordinate text, e.g. "-33.86,151.20" or "151.20 -33.86"
+    combined = _first_text(
+        listing,
+        ['geolocation', 'geoLocation', 'coordinates', 'position', 'point', 'latlng', 'longlat'],
+    )
+    if combined:
+        nums = re.findall(r'-?\d+(?:\.\d+)?', combined)
+        if len(nums) >= 2:
+            first = _to_decimal(nums[0])
+            second = _to_decimal(nums[1])
+            if first is not None and second is not None:
+                # If the first value cannot be latitude, treat as lon,lat.
+                if abs(first) > 90 and abs(second) <= 90:
+                    return second, first
+                return first, second
+
+    # Partial fallback if only one side was found in tags.
+    if latitude is not None or longitude is not None:
+        return latitude, longitude
+    return None, None
+
+
 def _build_feed_signature(parts: list[str]) -> str:
     payload = '\n'.join(parts).encode('utf-8')
     return hashlib.sha256(payload).hexdigest()
@@ -320,8 +375,7 @@ def parse_reaxml_file(xml_text: str, source_file: str = '') -> list[dict]:
             or _first_text(listing, ['landSizeUnits', 'areaUnits'])
         )
 
-        latitude = _to_decimal(_first_text(listing, ['latitude']))
-        longitude = _to_decimal(_first_text(listing, ['longitude']))
+        latitude, longitude = _extract_coordinates(listing)
 
         listing_agent = _direct_child(listing, 'listingAgent')
         agent_name = _first_text(listing_agent, ['name']) if listing_agent is not None else ''
