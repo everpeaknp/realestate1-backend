@@ -30,6 +30,17 @@ class Command(BaseCommand):
             action='store_true',
             help='Parse and calculate changes without writing to the database.',
         )
+        parser.add_argument(
+            '--skip-if-unchanged',
+            action='store_true',
+            help='Skip import when feed fingerprint has not changed since the previous successful import.',
+        )
+        parser.add_argument(
+            '--signature-file',
+            type=str,
+            default='',
+            help='Optional absolute path for persisted feed signature state.',
+        )
 
     def handle(self, *args, **options):
         summary = import_reaxml_feed(
@@ -37,7 +48,15 @@ class Command(BaseCommand):
             local_dir=options['local_dir'] or None,
             deactivate_missing=bool(options['deactivate_missing']),
             dry_run=bool(options['dry_run']),
+            skip_if_unchanged=bool(options['skip_if_unchanged']),
+            signature_file=options['signature_file'] or None,
         )
+
+        if summary.get('skipped_unchanged'):
+            self.stdout.write(self.style.WARNING('REAXML import skipped (feed unchanged)'))
+            self.stdout.write(f"Source: {summary['source'] or 'not set'}")
+            self.stdout.write(f"Signature file: {summary.get('signature_file') or 'default'}")
+            return
 
         self.stdout.write(self.style.SUCCESS('REAXML import finished'))
         self.stdout.write(f"Source: {summary['source'] or 'not set'}")
@@ -46,3 +65,5 @@ class Command(BaseCommand):
         self.stdout.write(f"Created: {summary['created']}")
         self.stdout.write(f"Updated: {summary['updated']}")
         self.stdout.write(f"Dry run: {summary['dry_run']}")
+        if summary.get('signature_file'):
+            self.stdout.write(f"Signature file: {summary['signature_file']}")

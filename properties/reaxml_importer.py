@@ -10,6 +10,7 @@ Responsibilities:
 from __future__ import annotations
 
 import ftplib
+import hashlib
 import io
 import re
 from dataclasses import dataclass
@@ -220,6 +221,29 @@ class ReaxmlFile:
     content: str
 
 
+def _build_feed_signature(parts: list[str]) -> str:
+    payload = '\n'.join(parts).encode('utf-8')
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _default_signature_file() -> Path:
+    media_root = str(getattr(settings, 'MEDIA_ROOT', '') or '').strip()
+    base_dir = Path(media_root) if media_root else Path('/tmp')
+    return base_dir / '.reaxml_feed_signature'
+
+
+def _read_saved_signature(path: Path) -> str:
+    try:
+        return path.read_text(encoding='utf-8').strip()
+    except OSError:
+        return ''
+
+
+def _write_saved_signature(path: Path, signature: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(signature, encoding='utf-8')
+
+
 def parse_reaxml_file(xml_text: str, source_file: str = '') -> list[dict]:
     root = ET.fromstring(xml_text)
     listings: list[dict] = []
@@ -356,7 +380,20 @@ def _read_local_files(directory: str) -> list[ReaxmlFile]:
     return files
 
 
-def _read_ftp_files() -> list[ReaxmlFile]:
+def _local_feed_signature(directory: str, files: list[ReaxmlFile]) -> str:
+    base = Path(directory)
+    parts: list[str] = []
+    for item in files:
+        file_path = base / item.name
+        try:
+            stat = file_path.stat()
+            parts.append(f'{item.name}|{stat.st_size}|{stat.st_mtime_ns}')
+        except OSError:
+            parts.append(f'{item.name}|0|0')
+    return _build_feed_signature(parts)
+
+
+def _read_ftp_files(previous_signature: str | None = None) -> tuple[list[ReaxmlFile], str, bool]:
     host = getattr(settings, 'REAXML_FTP_HOST', '').strip()
     username = getattr(settings, 'REAXML_FTP_USERNAME', '').strip()
     password = getattr(settings, 'REAXML_FTP_PASSWORD', '').strip()
@@ -365,26 +402,59 @@ def _read_ftp_files() -> list[ReaxmlFile]:
     port = int(getattr(settings, 'REAXML_FTP_PORT', 21))
 
     if not host or not username or not password:
-        return []
+        return [], '', False
 
     ftp = ftplib.FTP()
-    ftp.connect(host=host, port=port, timeout=30)
-    ftp.login(user=username, passwd=password)
-    ftp.set_pasv(passive)
-    ftp.cwd(remote_path)
+    try:
+        ftp.connect(host=host, port=port, timeout=30)
+        ftp.login(user=username, passwd=password)
+        ftp.set_pasv(passive)
+        ftp.cwd(remote_path)
 
-    entries = ftp.nlst()
-    xml_names = [name for name in entries if name.lower().endswith('.xml')]
-    files: list[ReaxmlFile] = []
+        entries = ftp.nlst()
+        xml_names = sorted(name for name in entries if name.lower().endswith('.xml'))
 
-    for name in sorted(xml_names):
-        buffer = io.BytesIO()
-        ftp.retrbinary(f'RETR {name}', buffer.write)
-        content = buffer.getvalue().decode('utf-8', errors='ignore')
-        files.append(ReaxmlFile(name=name, content=content))
+        signature_parts: list[str] = []
+        for name in xml_names:
+            size = ''
+            modified = ''
+            try:
+                size_value = ftp.size(name)
+                if size_value is not None:
+                    size = str(size_value)
+            except ftplib.all_errors:
+                size = ''
 
-    ftp.quit()
-    return files
+            try:
+                response = ftp.sendcmd(f'MDTM {name}')
+                tokens = response.strip().split()
+                if len(tokens) >= 2 and tokens[0].startswith('213'):
+                    modified = tokens[1]
+            except ftplib.all_errors:
+                modified = ''
+
+            signature_parts.append(f'{name}|{size}|{modified}')
+
+        signature = _build_feed_signature(signature_parts)
+        if previous_signature and signature == previous_signature:
+            return [], signature, True
+
+        files: list[ReaxmlFile] = []
+        for name in xml_names:
+            buffer = io.BytesIO()
+            ftp.retrbinary(f'RETR {name}', buffer.write)
+            content = buffer.getvalue().decode('utf-8', errors='ignore')
+            files.append(ReaxmlFile(name=name, content=content))
+
+        return files, signature, False
+    finally:
+        try:
+            ftp.quit()
+        except ftplib.all_errors:
+            try:
+                ftp.close()
+            except OSError:
+                pass
 
 
 def import_reaxml_feed(
@@ -393,20 +463,59 @@ def import_reaxml_feed(
     local_dir: str | None = None,
     deactivate_missing: bool = False,
     dry_run: bool = False,
+    skip_if_unchanged: bool = False,
+    signature_file: str | None = None,
 ) -> dict:
     """
     Import REAXML listings and upsert into ExternalPropertyFeed.
     """
 
+    signature_path = Path(signature_file).expanduser() if signature_file else _default_signature_file()
+    previous_signature = _read_saved_signature(signature_path) if skip_if_unchanged else ''
+    feed_signature = ''
+    skipped_unchanged = False
     files: list[ReaxmlFile] = []
+    source = ''
+
     if from_ftp:
-        files = _read_ftp_files()
+        source = 'ftp'
+        files, feed_signature, skipped_unchanged = _read_ftp_files(
+            previous_signature=previous_signature if skip_if_unchanged else None
+        )
     elif local_dir:
+        source = local_dir
         files = _read_local_files(local_dir)
+        feed_signature = _local_feed_signature(local_dir, files)
     else:
         default_dir = getattr(settings, 'REAXML_LOCAL_DIR', '').strip()
         if default_dir:
+            source = default_dir
             files = _read_local_files(default_dir)
+            feed_signature = _local_feed_signature(default_dir, files)
+
+    if skip_if_unchanged and skipped_unchanged:
+        return {
+            'files_processed': 0,
+            'records_parsed': 0,
+            'created': 0,
+            'updated': 0,
+            'dry_run': dry_run,
+            'source': source,
+            'skipped_unchanged': True,
+            'signature_file': str(signature_path),
+        }
+
+    if skip_if_unchanged and previous_signature and feed_signature and feed_signature == previous_signature:
+        return {
+            'files_processed': 0,
+            'records_parsed': 0,
+            'created': 0,
+            'updated': 0,
+            'dry_run': dry_run,
+            'source': source,
+            'skipped_unchanged': True,
+            'signature_file': str(signature_path),
+        }
 
     parsed_records: list[dict] = []
     for xml_file in files:
@@ -443,11 +552,16 @@ def import_reaxml_feed(
             else:
                 created += 1
 
+    if skip_if_unchanged and feed_signature and not dry_run:
+        _write_saved_signature(signature_path, feed_signature)
+
     return {
         'files_processed': len(files),
         'records_parsed': len(parsed_records),
         'created': created,
         'updated': updated,
         'dry_run': dry_run,
-        'source': 'ftp' if from_ftp else (local_dir or getattr(settings, 'REAXML_LOCAL_DIR', '')),
+        'source': source or ('ftp' if from_ftp else (local_dir or getattr(settings, 'REAXML_LOCAL_DIR', ''))),
+        'skipped_unchanged': False,
+        'signature_file': str(signature_path) if skip_if_unchanged else None,
     }
