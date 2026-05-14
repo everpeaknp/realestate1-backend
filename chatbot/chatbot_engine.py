@@ -17,6 +17,7 @@ import random
 import re
 
 from django.conf import settings
+from django.core.cache import cache
 
 from .models import ChatbotRule, KnowledgeBase
 from .nlp_engine import extractor, searcher
@@ -26,6 +27,8 @@ from faqs.models import FAQ
 
 class ChatbotEngine:
     """Main chatbot engine — orchestrates the NLP pipeline."""
+    SEARCH_PAGE_SIZE = 8
+    SEARCH_CACHE_TTL_SECONDS = 1800
 
     def __init__(self):
         # Keep NLTK processor as intent fallback
@@ -40,6 +43,12 @@ class ChatbotEngine:
     # ---------------------------------------------------------------- #
 
     def process_message(self, message: str, session_id: str | None = None) -> dict:
+        if self._is_show_more_request(message):
+            response = self._handle_show_more(session_id)
+            if response:
+                sentiment = self._analyze_sentiment(message)
+                return self._result(response, "property_search", 0.95, sentiment)
+
         intent, confidence = self._detect_intent(message)
         sentiment = self._analyze_sentiment(message)
         extracted_budget = extractor.extract_budget(message)
@@ -47,7 +56,7 @@ class ChatbotEngine:
 
         # Budget-only queries should bypass generic rules/KB and go to property search.
         if budget_only_query:
-            response = self._handle_property_search(message, sentiment)
+            response = self._handle_property_search(message, sentiment, session_id=session_id)
             return self._result(response, "property_search", 0.95, sentiment)
 
         # 0. Rule-based — ABSOLUTE HIGHEST PRIORITY
@@ -134,7 +143,7 @@ class ChatbotEngine:
         ]
         if any(indicator in msg_lower for indicator in property_search_indicators):
             # Skip KB/FAQ and go directly to property search
-            response = self._handle_property_search(message, sentiment)
+            response = self._handle_property_search(message, sentiment, session_id=session_id)
             return self._result(response, "property_search", 0.95, sentiment)
 
         # 2. Knowledge Base — semantic search
@@ -148,7 +157,7 @@ class ChatbotEngine:
             return self._result(faq_response, "faq_match", 0.90, sentiment)
 
         # 4. Intent handlers with spaCy NER
-        response = self._generate_response(intent, message, sentiment)
+        response = self._generate_response(intent, message, sentiment, session_id=session_id)
         return self._result(response, intent, confidence, sentiment)
 
     # ---------------------------------------------------------------- #
@@ -251,6 +260,18 @@ class ChatbotEngine:
             if first and second:
                 return (min(first, second), max(first, second))
 
+        if extracted_budget is None:
+            return (None, None)
+
+        msg = message.lower()
+        if re.search(r"\b(around|about|approx(?:\.|imately)?)\b", msg):
+            lower = int(extracted_budget * 0.85)
+            upper = int(extracted_budget * 1.15)
+            return (lower, upper)
+
+        if re.search(r"\b(over|above|from|min(?:imum)?)\b", msg):
+            return (extracted_budget, None)
+
         return (None, extracted_budget)
 
     def _looks_like_budget_query(self, message: str, extracted_budget: int | None) -> bool:
@@ -275,7 +296,99 @@ class ChatbotEngine:
         ]
         return any(term in msg for term in budget_terms)
 
-    def _dedupe_property_dicts(self, properties: list[dict], max_items: int = 4) -> list[dict]:
+    def _is_show_more_request(self, message: str) -> bool:
+        msg = message.strip().lower()
+        return bool(
+            re.fullmatch(
+                r"(show\s+me\s+more|show\s+more(?:\s+properties)?|more|next(?:\s+properties|\s+page)?)",
+                msg,
+            )
+        )
+
+    def _search_cache_key(self, session_id: str) -> str:
+        return f"chatbot_property_search_{session_id}"
+
+    def _remember_search(self, session_id: str | None, properties: list[dict], filter_str: str) -> None:
+        if not session_id or not properties:
+            return
+        cache.set(
+            self._search_cache_key(session_id),
+            {
+                "properties": properties,
+                "offset": self.SEARCH_PAGE_SIZE,
+                "filter_str": filter_str,
+            },
+            timeout=self.SEARCH_CACHE_TTL_SECONDS,
+        )
+
+    def _handle_show_more(self, session_id: str | None) -> str | None:
+        if not session_id:
+            return (
+                "I can show more only in the same chat session. "
+                "Please search again and then reply 'show more properties'."
+            )
+
+        payload = cache.get(self._search_cache_key(session_id))
+        if not payload:
+            return (
+                "No recent property results to continue. "
+                "Tell me your budget or suburb and I will search again."
+            )
+
+        properties = payload.get("properties") or []
+        offset = int(payload.get("offset", self.SEARCH_PAGE_SIZE))
+        filter_str = payload.get("filter_str", "")
+
+        if offset >= len(properties):
+            cache.delete(self._search_cache_key(session_id))
+            return "You've seen all matching properties. Try a new budget or suburb."
+
+        chunk = properties[offset: offset + self.SEARCH_PAGE_SIZE]
+        response = f"Here are more properties{filter_str}:\n\n"
+        for prop in chunk:
+            response += self._format_eagle_property(prop) + "\n\n"
+
+        new_offset = offset + len(chunk)
+        remaining = max(len(properties) - new_offset, 0)
+        if remaining > 0:
+            payload["offset"] = new_offset
+            cache.set(self._search_cache_key(session_id), payload, timeout=self.SEARCH_CACHE_TTL_SECONDS)
+            response += f"I can show {remaining} more matching properties. Reply 'show more properties'."
+        else:
+            cache.delete(self._search_cache_key(session_id))
+            response += "That's all matching properties for now. Want to refine your search?"
+        return response
+
+    def _sort_property_dicts_by_budget(self, properties: list[dict], target_budget: float) -> list[dict]:
+        def _distance(prop: dict) -> tuple[float, float]:
+            try:
+                price = float(prop.get("price"))
+            except (TypeError, ValueError):
+                return (float("inf"), 0.0)
+            return (abs(price - target_budget), -price)
+
+        return sorted(properties, key=_distance)
+
+    def _build_property_search_response(
+        self,
+        results: list[dict],
+        filter_str: str,
+        session_id: str | None,
+    ) -> str:
+        page = results[: self.SEARCH_PAGE_SIZE]
+        response = f"Here are some properties{filter_str}:\n\n"
+        for prop in page:
+            response += self._format_eagle_property(prop) + "\n\n"
+
+        remaining = max(len(results) - len(page), 0)
+        if remaining > 0:
+            self._remember_search(session_id, results, filter_str)
+            response += f"I can show {remaining} more matching properties. Reply 'show more properties'."
+        else:
+            response += "Would you like more details on any of these? Just ask!"
+        return response
+
+    def _dedupe_property_dicts(self, properties: list[dict], max_items: int = 40) -> list[dict]:
         unique: list[dict] = []
         seen: set[tuple[str, str, str]] = set()
 
@@ -327,7 +440,7 @@ class ChatbotEngine:
     #  Intent dispatch                                                  #
     # ---------------------------------------------------------------- #
 
-    def _generate_response(self, intent: str, message: str, sentiment: dict) -> str:
+    def _generate_response(self, intent: str, message: str, sentiment: dict, session_id: str | None = None) -> str:
         handlers = {
             "greeting":         self._handle_greeting,
             "goodbye":          self._handle_goodbye,
@@ -344,7 +457,10 @@ class ChatbotEngine:
             "help":             self._handle_help,
             "general":          self._handle_general,
         }
-        return handlers.get(intent, self._handle_general)(message, sentiment)
+        handler = handlers.get(intent, self._handle_general)
+        if intent in {"property_search", "general"}:
+            return handler(message, sentiment, session_id=session_id)
+        return handler(message, sentiment)
 
     # ---------------------------------------------------------------- #
     #  Formatters                                                       #
@@ -471,18 +587,29 @@ class ChatbotEngine:
             "Have a great day! Don't hesitate to reach out if you have more questions.",
         ])
 
-    def _handle_property_search(self, message, sentiment):
+    def _handle_property_search(self, message, sentiment, session_id: str | None = None):
         """
         Handle property search - tries Eagle API first, then Django DB.
         Eagle API is the primary source since Django DB may be empty.
         """
         import logging
-        logger = logging.getLogger(__name__)
 
+        logger = logging.getLogger(__name__)
         cities = self._known_cities()
         ents = extractor.extract_all(message, cities)
         msg_lower = message.lower()
         budget_min, budget_max = self._extract_budget_bounds(message, ents.get("budget"))
+        around_query = bool(re.search(r"\b(around|about|approx(?:\.|imately)?)\b", msg_lower))
+
+        target_budget = None
+        if around_query and ents.get("budget") is not None:
+            target_budget = float(ents["budget"])
+        elif budget_min is not None and budget_max is not None:
+            target_budget = (budget_min + budget_max) / 2
+        elif budget_max is not None:
+            target_budget = float(budget_max)
+        elif budget_min is not None:
+            target_budget = float(budget_min)
 
         def _price_value(value):
             try:
@@ -497,7 +624,20 @@ class ChatbotEngine:
                 return f"${budget_min:,} - ${budget_max:,}"
             if budget_max is not None:
                 return f"under ${budget_max:,}"
+            if budget_min is not None:
+                return f"over ${budget_min:,}"
             return None
+
+        def _filter_str():
+            filters = []
+            if ents["city"]:
+                filters.append(f"in {ents['city']}")
+            if ents["beds"]:
+                filters.append(f"{ents['beds']}+ bedrooms")
+            budget_label = _budget_filter_label()
+            if budget_label:
+                filters.append(budget_label)
+            return f" ({', '.join(filters)})" if filters else ""
 
         # REAXML source can be read directly from backend DB without relying on frontend proxy.
         if self._use_reaxml_source():
@@ -517,7 +657,7 @@ class ChatbotEngine:
             if budget_max is not None:
                 qs = qs.filter(price__lte=budget_max)
 
-            candidates = list(qs.order_by("-updated_at")[:40])
+            candidates = list(qs.order_by("-updated_at")[:80])
             normalized: list[dict] = []
             for listing in candidates:
                 normalized.append(
@@ -534,23 +674,13 @@ class ChatbotEngine:
                         "landSizeUnits": listing.land_size_units or "sqm",
                     }
                 )
-            results = self._dedupe_property_dicts(normalized, max_items=4)
-            if results:
-                filters = []
-                if ents["city"]:
-                    filters.append(f"in {ents['city']}")
-                if ents["beds"]:
-                    filters.append(f"{ents['beds']}+ bedrooms")
-                budget_label = _budget_filter_label()
-                if budget_label:
-                    filters.append(budget_label)
-                filter_str = f" ({', '.join(filters)})" if filters else ""
 
-                response = f"Here are some properties{filter_str}:\n\n"
-                for prop in results:
-                    response += self._format_eagle_property(prop) + "\n\n"
-                response += "Would you like more details on any of these? Just ask!"
-                return response
+            if target_budget is not None:
+                normalized = self._sort_property_dicts_by_budget(normalized, target_budget)
+
+            results = self._dedupe_property_dicts(normalized, max_items=40)
+            if results:
+                return self._build_property_search_response(results, _filter_str(), session_id)
 
             total_feed = ExternalPropertyFeed.objects.filter(is_active=True).count()
             return (
@@ -562,18 +692,17 @@ class ChatbotEngine:
         # Try Eagle API first (primary source)
         try:
             from .eagle_client import get_eagle_client
+
             eagle_client = get_eagle_client()
-            
-            # Build search term from extracted entities
+
             search_parts = []
             if ents["city"]:
                 search_parts.append(ents["city"])
             if ents["beds"]:
                 search_parts.append(f"{ents['beds']} bedroom")
-            
+
             search_term = " ".join(search_parts) if search_parts else ""
-            
-            # Determine property type filter
+
             property_type = None
             if any(w in msg_lower for w in ["house", "houses"]):
                 property_type = "HOUSE"
@@ -583,70 +712,58 @@ class ChatbotEngine:
                 property_type = "TOWNHOUSE"
             elif any(w in msg_lower for w in ["villa", "villas"]):
                 property_type = "VILLA"
-            
-            logger.info(f"[Chatbot] Searching Eagle API: search_term='{search_term}', property_type={property_type}")
-            
-            # Search Eagle API
+
+            logger.info(
+                "[Chatbot] Searching Eagle API: search_term='%s', property_type=%s",
+                search_term,
+                property_type,
+            )
             eagle_properties = eagle_client.search_properties(
                 search_term=search_term,
-                limit=20,
-                status='ACTIVE',
-                property_type=property_type
+                limit=60,
+                status="ACTIVE",
+                property_type=property_type,
             )
 
             if eagle_properties:
                 if budget_min is not None:
                     eagle_properties = [
                         p for p in eagle_properties
-                        if (_price_value(p.get('price')) is not None and _price_value(p.get('price')) >= budget_min)
+                        if (_price_value(p.get("price")) is not None and _price_value(p.get("price")) >= budget_min)
                     ]
                 if budget_max is not None:
                     eagle_properties = [
                         p for p in eagle_properties
-                        if (_price_value(p.get('price')) is not None and _price_value(p.get('price')) <= budget_max)
+                        if (_price_value(p.get("price")) is not None and _price_value(p.get("price")) <= budget_max)
                     ]
-
                 if ents["beds"]:
                     eagle_properties = [
                         p for p in eagle_properties
-                        if (p.get('bedrooms') or p.get('beds') or 0) >= ents["beds"]
+                        if (p.get("bedrooms") or p.get("beds") or 0) >= ents["beds"]
                     ]
 
-                results = self._dedupe_property_dicts(eagle_properties, max_items=4)
+                if target_budget is not None:
+                    eagle_properties = self._sort_property_dicts_by_budget(eagle_properties, target_budget)
 
+                results = self._dedupe_property_dicts(eagle_properties, max_items=40)
                 if results:
-                    filters = []
-                    if ents["city"]:
-                        filters.append(f"in {ents['city']}")
-                    if ents["beds"]:
-                        filters.append(f"{ents['beds']}+ bedrooms")
-                    budget_label = _budget_filter_label()
-                    if budget_label:
-                        filters.append(budget_label)
-                    filter_str = f" ({', '.join(filters)})" if filters else ""
+                    return self._build_property_search_response(results, _filter_str(), session_id)
 
-                    response = f"Here are some properties{filter_str}:\n\n"
-                    for prop in results:
-                        response += self._format_eagle_property(prop) + "\n\n"
-                    response += "Would you like more details on any of these? Just ask!"
-                    return response
-
-                # Eagle API returned properties but none matched filters
-                logger.info(f"[Chatbot] Eagle API returned {len(eagle_properties)} properties but none matched filters")
+                logger.info(
+                    "[Chatbot] Eagle API returned %s properties but none matched filters",
+                    len(eagle_properties),
+                )
                 return (
                     f"I found {len(eagle_properties)} properties, but none matched your exact criteria.\n\n"
                     "Try adjusting your budget, bedroom count, or location, or say 'show all properties'."
                 )
 
             logger.info("[Chatbot] Eagle API returned no properties")
-
         except Exception as e:
             logger.error(f"[Chatbot] Eagle API search failed: {str(e)}")
-            # Continue to Django DB fallback
 
         # Fallback to Django DB
         qs = Property.objects.filter(status="AVAILABLE")
-
         if any(w in msg_lower for w in ["rent", "rental", "lease"]):
             qs = qs.filter(property_type="FOR_RENT")
         elif any(w in msg_lower for w in ["buy", "purchase", "sale", "for sale"]):
@@ -661,24 +778,29 @@ class ChatbotEngine:
         if budget_max is not None:
             qs = qs.filter(price__lte=budget_max)
 
-        results = qs[:4]
-        if results.exists():
-            filters = []
-            if ents["city"]:
-                filters.append(f"in {ents['city']}")
-            if ents["beds"]:
-                filters.append(f"{ents['beds']}+ bedrooms")
-            budget_label = _budget_filter_label()
-            if budget_label:
-                filters.append(budget_label)
-            filter_str = f" ({', '.join(filters)})" if filters else ""
-            response = f"Here are some properties{filter_str}:\n\n"
-            for prop in results:
-                response += self._format_property(prop) + "\n\n"
-            response += "Would you like more details on any of these? Just ask!"
-            return response
+        candidates = list(qs.order_by("-updated_at")[:80])
+        normalized = []
+        for listing in candidates:
+            normalized.append(
+                {
+                    "headline": listing.title or "Property",
+                    "price": _price_value(listing.price) or 0,
+                    "propertyType": listing.get_property_type_display() if hasattr(listing, "get_property_type_display") else "Property",
+                    "formattedAddress": f"{listing.city}, {listing.state}",
+                    "description": listing.description or "",
+                    "bedrooms": listing.beds,
+                    "bathrooms": _price_value(listing.baths),
+                    "garages": listing.garage,
+                }
+            )
 
-        # No results from either source
+        if target_budget is not None:
+            normalized = self._sort_property_dicts_by_budget(normalized, target_budget)
+
+        results = self._dedupe_property_dicts(normalized, max_items=40)
+        if results:
+            return self._build_property_search_response(results, _filter_str(), session_id)
+
         total_django = Property.objects.filter(status="AVAILABLE").count()
         return (
             f"No properties matched those exact criteria.\n\n"
@@ -856,10 +978,10 @@ class ChatbotEngine:
             "What would you like to do?"
         )
 
-    def _handle_general(self, message, sentiment):
+    def _handle_general(self, message, sentiment, session_id: str | None = None):
         msg_lower = message.lower()
         if any(w in msg_lower for w in ["all properties", "all listings", "everything", "show me all"]):
-            return self._handle_property_search(message, sentiment)
+            return self._handle_property_search(message, sentiment, session_id=session_id)
         if sentiment.get("compound", 0) < -0.5:
             return (
                 "I understand your concern. Let me help you find the right solution. "
