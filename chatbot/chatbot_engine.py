@@ -229,6 +229,27 @@ class ChatbotEngine:
     def _use_reaxml_source(self) -> bool:
         return getattr(settings, "PROPERTY_FEED_SOURCE", "EAGLE_API").strip().upper() == "REAXML"
 
+    @staticmethod
+    def _slugify_title(text: str | None) -> str:
+        value = (text or "").lower().strip()
+        value = re.sub(r"[^a-z0-9\s-]", "", value)
+        value = re.sub(r"\s+", "-", value)
+        value = re.sub(r"-{2,}", "-", value).strip("-")
+        return value
+
+    def _build_property_detail_path(self, prop: dict) -> str:
+        existing = str(prop.get("detailPath") or "").strip()
+        if existing.startswith("/properties/"):
+            return existing
+
+        pid = str(prop.get("id") or prop.get("externalId") or prop.get("external_id") or "").strip()
+        if not pid:
+            return ""
+
+        title_slug = self._slugify_title(str(prop.get("headline") or ""))
+        slug = f"{title_slug}--{pid}" if title_slug else pid
+        return f"/properties/{slug}"
+
     def _extract_budget_bounds(self, message: str, extracted_budget: int | None) -> tuple[int | None, int | None]:
         """
         Parse common range phrases like:
@@ -534,6 +555,7 @@ class ChatbotEngine:
             details_parts.append(f"{parking} parking")
         
         details = " | ".join(details_parts) if details_parts else "Details not specified"
+        detail_path = self._build_property_detail_path(prop)
         
         # Build response
         lines = [
@@ -549,6 +571,10 @@ class ChatbotEngine:
         land_units = prop.get('landSizeUnits', 'sqm')
         if land_size:
             lines.append(f"Land: {land_size} {land_units}")
+
+        if detail_path:
+            lines.append("Open Listing:")
+            lines.append(detail_path)
         
         lines.append("")
         return "\n".join(lines)
@@ -662,6 +688,7 @@ class ChatbotEngine:
             for listing in candidates:
                 normalized.append(
                     {
+                        "id": listing.external_id,
                         "headline": listing.headline or listing.formatted_address or "Property",
                         "price": _price_value(listing.price) or 0,
                         "propertyType": listing.property_type or listing.listing_type or "Property",
