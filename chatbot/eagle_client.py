@@ -26,8 +26,8 @@ class EagleAPIClient:
                          Defaults to FRONTEND_URL env var or localhost:3000
         """
         if frontend_url is None:
-            # Try environment variable first, then default to localhost
-            frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+            # Prefer explicit env var; fallback to docker service name in containers.
+            frontend_url = os.getenv('FRONTEND_URL') or 'http://realestate1-frontend:3000'
         
         self.frontend_url = frontend_url.rstrip('/')
         self.timeout = 45

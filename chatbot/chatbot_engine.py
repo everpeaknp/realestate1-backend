@@ -16,9 +16,11 @@ from __future__ import annotations
 import random
 import re
 
+from django.conf import settings
+
 from .models import ChatbotRule, KnowledgeBase
 from .nlp_engine import extractor, searcher
-from properties.models import Property
+from properties.models import ExternalPropertyFeed, Property
 from faqs.models import FAQ
 
 
@@ -200,7 +202,49 @@ class ChatbotEngine:
         return "general"
 
     def _known_cities(self) -> list[str]:
-        return list(Property.objects.values_list("city", flat=True).distinct())
+        cities = set(Property.objects.values_list("city", flat=True).distinct())
+        if self._use_reaxml_source():
+            suburbs = ExternalPropertyFeed.objects.filter(is_active=True).values_list("suburb", flat=True).distinct()
+            for suburb in suburbs:
+                if suburb:
+                    cities.add(suburb)
+        return sorted([city for city in cities if city])
+
+    def _use_reaxml_source(self) -> bool:
+        return getattr(settings, "PROPERTY_FEED_SOURCE", "EAGLE_API").strip().upper() == "REAXML"
+
+    def _extract_budget_bounds(self, message: str, extracted_budget: int | None) -> tuple[int | None, int | None]:
+        """
+        Parse common range phrases like:
+          - "1200000 to 1500000"
+          - "between 1.2m and 1.5m"
+        Returns (min_budget, max_budget). For single budget, max is set.
+        """
+        def _parse_amount(token: str) -> int | None:
+            cleaned = token.lower().replace(",", "").replace("$", "").strip()
+            multiplier = 1
+            if cleaned.endswith("m"):
+                multiplier = 1_000_000
+                cleaned = cleaned[:-1]
+            elif cleaned.endswith("k"):
+                multiplier = 1_000
+                cleaned = cleaned[:-1]
+            try:
+                return int(float(cleaned) * multiplier)
+            except (TypeError, ValueError):
+                return None
+
+        range_match = re.search(
+            r"(?:between\s+)?([$]?\d[\d,]*(?:\.\d+)?[mk]?)\s*(?:to|-|and)\s*([$]?\d[\d,]*(?:\.\d+)?[mk]?)",
+            message.lower(),
+        )
+        if range_match:
+            first = _parse_amount(range_match.group(1))
+            second = _parse_amount(range_match.group(2))
+            if first and second:
+                return (min(first, second), max(first, second))
+
+        return (None, extracted_budget)
 
     # ---------------------------------------------------------------- #
     #  Rule matching                                                    #
@@ -283,36 +327,36 @@ class ChatbotEngine:
         formatted_address = prop.get('formattedAddress', 'Location not specified')
         description = prop.get('description', '')
         
-        # Try to extract bedrooms, bathrooms, and parking from description
-        bedrooms = 0
-        bathrooms = 0
-        parking = 0
-        
-        # Look for patterns like "4 Spacious Bedrooms", "4 bed", "4BR", etc.
-        bed_match = re.search(r'(\d+)\s*(?:Spacious\s+)?(?:Bedroom|bed|BR)', description, re.IGNORECASE)
-        if bed_match:
-            bedrooms = int(bed_match.group(1))
-        
-        # Look for patterns like "2 Modern Bathrooms", "2 bath", "2BA", etc.
-        bath_match = re.search(r'(\d+)\s*(?:Modern\s+)?(?:Bathroom|bath|BA)', description, re.IGNORECASE)
-        if bath_match:
-            bathrooms = int(bath_match.group(1))
-        
-        # Look for patterns like "Double Car Garage", "2 car garage", "2 parking", etc.
-        parking_patterns = [
-            r'Double\s+Car\s+Garage',  # Double Car Garage
-            r'(\d+)\s+Car\s+Garage',   # 2 Car Garage
-            r'(\d+)\s+Garage',         # 2 Garage
-            r'(\d+)\s+parking',        # 2 parking
-        ]
-        for pattern in parking_patterns:
-            parking_match = re.search(pattern, description, re.IGNORECASE)
-            if parking_match:
-                if 'Double' in parking_match.group(0):
-                    parking = 2
-                else:
-                    parking = int(parking_match.group(1))
-                break
+        # Prefer structured fields when present (REAXML source), then fallback to regex parsing.
+        bedrooms = prop.get("bedrooms") or prop.get("beds") or 0
+        bathrooms = prop.get("bathrooms") or prop.get("baths") or 0
+        parking = prop.get("garages") or prop.get("cars") or 0
+
+        if not bedrooms:
+            bed_match = re.search(r'(\d+)\s*(?:Spacious\s+)?(?:Bedroom|bed|BR)', description, re.IGNORECASE)
+            if bed_match:
+                bedrooms = int(bed_match.group(1))
+
+        if not bathrooms:
+            bath_match = re.search(r'(\d+)\s*(?:Modern\s+)?(?:Bathroom|bath|BA)', description, re.IGNORECASE)
+            if bath_match:
+                bathrooms = int(bath_match.group(1))
+
+        if not parking:
+            parking_patterns = [
+                r'Double\s+Car\s+Garage',  # Double Car Garage
+                r'(\d+)\s+Car\s+Garage',   # 2 Car Garage
+                r'(\d+)\s+Garage',         # 2 Garage
+                r'(\d+)\s+parking',        # 2 parking
+            ]
+            for pattern in parking_patterns:
+                parking_match = re.search(pattern, description, re.IGNORECASE)
+                if parking_match:
+                    if 'Double' in parking_match.group(0):
+                        parking = 2
+                    else:
+                        parking = int(parking_match.group(1))
+                    break
         
         # Format price
         price_str = f"${price:,.0f}" if price > 0 else "Price on request"
@@ -387,10 +431,81 @@ class ChatbotEngine:
         """
         import logging
         logger = logging.getLogger(__name__)
-        
+
         cities = self._known_cities()
         ents = extractor.extract_all(message, cities)
         msg_lower = message.lower()
+        budget_min, budget_max = self._extract_budget_bounds(message, ents.get("budget"))
+
+        def _price_value(value):
+            try:
+                if value is None:
+                    return None
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        def _budget_filter_label():
+            if budget_min is not None and budget_max is not None:
+                return f"${budget_min:,} - ${budget_max:,}"
+            if budget_max is not None:
+                return f"under ${budget_max:,}"
+            return None
+
+        # REAXML source can be read directly from backend DB without relying on frontend proxy.
+        if self._use_reaxml_source():
+            qs = ExternalPropertyFeed.objects.filter(is_active=True)
+
+            if any(w in msg_lower for w in ["rent", "rental", "lease"]):
+                qs = qs.filter(listing_type__in=["RENTAL", "HOLIDAY"])
+            elif any(w in msg_lower for w in ["buy", "purchase", "sale", "for sale"]):
+                qs = qs.exclude(listing_type__in=["RENTAL", "HOLIDAY"])
+
+            if ents["city"]:
+                qs = qs.filter(suburb__iexact=ents["city"])
+            if ents["beds"]:
+                qs = qs.filter(bedrooms__gte=ents["beds"])
+            if budget_min is not None:
+                qs = qs.filter(price__gte=budget_min)
+            if budget_max is not None:
+                qs = qs.filter(price__lte=budget_max)
+
+            results = list(qs.order_by("-updated_at")[:4])
+            if results:
+                filters = []
+                if ents["city"]:
+                    filters.append(f"in {ents['city']}")
+                if ents["beds"]:
+                    filters.append(f"{ents['beds']}+ bedrooms")
+                budget_label = _budget_filter_label()
+                if budget_label:
+                    filters.append(budget_label)
+                filter_str = f" ({', '.join(filters)})" if filters else ""
+
+                response = f"Here are some properties{filter_str}:\n\n"
+                for listing in results:
+                    payload = {
+                        "headline": listing.headline or listing.formatted_address or "Property",
+                        "price": _price_value(listing.price) or 0,
+                        "propertyType": listing.property_type or listing.listing_type or "Property",
+                        "formattedAddress": listing.formatted_address or listing.suburb or "Location not specified",
+                        "description": listing.description or "",
+                        "bedrooms": listing.bedrooms,
+                        "bathrooms": _price_value(listing.bathrooms),
+                        "garages": listing.garages,
+                        "landSize": listing.land_size,
+                        "landSizeUnits": listing.land_size_units or "sqm",
+                    }
+                    response += self._format_eagle_property(payload) + "\n\n"
+                response += "Would you like more details on any of these? Just ask!"
+                return response
+
+            total_feed = ExternalPropertyFeed.objects.filter(is_active=True).count()
+            return (
+                f"No properties matched those exact criteria.\n\n"
+                f"We have {total_feed} active REAXML listings right now. "
+                "Try a different suburb, budget, or bedroom count, or say 'show all properties'."
+            )
 
         # Try Eagle API first (primary source)
         try:
@@ -426,51 +541,57 @@ class ChatbotEngine:
                 status='ACTIVE',
                 property_type=property_type
             )
-            
+
             if eagle_properties:
-                # Filter by budget if specified
-                if ents["budget"]:
+                if budget_min is not None:
                     eagle_properties = [
-                        p for p in eagle_properties 
-                        if p.get('price', 0) <= ents["budget"]
+                        p for p in eagle_properties
+                        if (_price_value(p.get('price')) is not None and _price_value(p.get('price')) >= budget_min)
                     ]
-                
-                # Filter by bedrooms if specified
+                if budget_max is not None:
+                    eagle_properties = [
+                        p for p in eagle_properties
+                        if (_price_value(p.get('price')) is not None and _price_value(p.get('price')) <= budget_max)
+                    ]
+
                 if ents["beds"]:
                     eagle_properties = [
-                        p for p in eagle_properties 
-                        if p.get('bedrooms', 0) >= ents["beds"]
+                        p for p in eagle_properties
+                        if (p.get('bedrooms') or p.get('beds') or 0) >= ents["beds"]
                     ]
-                
-                # Take top 4 results
+
                 results = eagle_properties[:4]
-                
+
                 if results:
                     filters = []
-                    if ents["city"]:   filters.append(f"in {ents['city']}")
-                    if ents["beds"]:   filters.append(f"{ents['beds']}+ bedrooms")
-                    if ents["budget"]: filters.append(f"under ${ents['budget']:,}")
+                    if ents["city"]:
+                        filters.append(f"in {ents['city']}")
+                    if ents["beds"]:
+                        filters.append(f"{ents['beds']}+ bedrooms")
+                    budget_label = _budget_filter_label()
+                    if budget_label:
+                        filters.append(budget_label)
                     filter_str = f" ({', '.join(filters)})" if filters else ""
-                    
+
                     response = f"Here are some properties{filter_str}:\n\n"
                     for prop in results:
                         response += self._format_eagle_property(prop) + "\n\n"
                     response += "Would you like more details on any of these? Just ask!"
                     return response
-                
+
                 # Eagle API returned properties but none matched filters
                 logger.info(f"[Chatbot] Eagle API returned {len(eagle_properties)} properties but none matched filters")
                 return (
                     f"I found {len(eagle_properties)} properties, but none matched your exact criteria.\n\n"
                     "Try adjusting your budget, bedroom count, or location, or say 'show all properties'."
                 )
-            
+
             logger.info("[Chatbot] Eagle API returned no properties")
-            
+
         except Exception as e:
             logger.error(f"[Chatbot] Eagle API search failed: {str(e)}")
             # Continue to Django DB fallback
-        
+
         # Fallback to Django DB
         qs = Property.objects.filter(status="AVAILABLE")
 
@@ -483,15 +604,21 @@ class ChatbotEngine:
             qs = qs.filter(beds__gte=ents["beds"])
         if ents["city"]:
             qs = qs.filter(city__iexact=ents["city"])
-        if ents["budget"]:
-            qs = qs.filter(price__lte=ents["budget"])
+        if budget_min is not None:
+            qs = qs.filter(price__gte=budget_min)
+        if budget_max is not None:
+            qs = qs.filter(price__lte=budget_max)
 
         results = qs[:4]
         if results.exists():
             filters = []
-            if ents["city"]:   filters.append(f"in {ents['city']}")
-            if ents["beds"]:   filters.append(f"{ents['beds']}+ bedrooms")
-            if ents["budget"]: filters.append(f"under ${ents['budget']:,}")
+            if ents["city"]:
+                filters.append(f"in {ents['city']}")
+            if ents["beds"]:
+                filters.append(f"{ents['beds']}+ bedrooms")
+            budget_label = _budget_filter_label()
+            if budget_label:
+                filters.append(budget_label)
             filter_str = f" ({', '.join(filters)})" if filters else ""
             response = f"Here are some properties{filter_str}:\n\n"
             for prop in results:
