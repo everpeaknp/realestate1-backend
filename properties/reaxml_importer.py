@@ -124,11 +124,15 @@ def _extract_address(listing: ET.Element) -> tuple[str, str, str, str]:
         return formatted, '', '', ''
 
     display = (address.attrib.get('display') or '').strip()
+    display_flag = display.lower()
     suburb = (address.attrib.get('suburb') or _first_text(address, ['suburb'])).strip()
     state = (address.attrib.get('state') or _first_text(address, ['state'])).strip()
     postcode = (address.attrib.get('postcode') or _first_text(address, ['postcode', 'postCode'])).strip()
 
-    if display:
+    # In REAXML, address.display is commonly a visibility flag (yes/no), not
+    # a formatted address string. Only trust it as an address when it is not a
+    # boolean-like value.
+    if display and display_flag not in {'yes', 'no', 'true', 'false', '1', '0'}:
         return display, suburb, state, postcode
 
     unit = _first_text(address, ['unitNumber', 'unit'])
@@ -140,6 +144,11 @@ def _extract_address(listing: ET.Element) -> tuple[str, str, str, str]:
 
     locality_parts = [part for part in [suburb, state, postcode] if part]
     locality = ', '.join(locality_parts).strip()
+
+    # Respect hidden street-address feeds (display=no/false/0) by returning
+    # only suburb/state/postcode when possible.
+    if display_flag in {'no', 'false', '0'} and locality:
+        return locality, suburb, state, postcode
 
     if street_line and locality:
         return f'{street_line}, {locality}', suburb, state, postcode
